@@ -1816,6 +1816,40 @@ function updateTime() {
     } catch (e) { console.error('Categories error:', e); }
 }
 
+function populateCatSelect() {
+    const select = $('prodCat');
+    if (!select) return;
+    select.innerHTML = categories.map(c => 
+        `<option value="${c.id}">${c.icon || '📦'} ${c.name}</option>`
+    ).join('');
+}
+
+function renderCategories() {
+    const container = $('categories');
+    if (!container) return;
+    
+    let html = `<button class="category-btn ${!selectedCat ? 'active' : ''}" onclick="selectCat(null)">🏪 Toate</button>`;
+    categories.forEach(c => {
+        html += `<button class="category-btn ${selectedCat === c.id ? 'active' : ''}" onclick="selectCat(${c.id})">${c.icon || '📦'} ${c.name}</button>`;
+    });
+    container.innerHTML = html;
+}
+
+function selectCat(id) {
+    selectedCat = id;
+    document.querySelectorAll('.category-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', id === null ? i === 0 : false);
+    });
+    if (id !== null) {
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            if (btn.textContent.includes(categories.find(c => c.id === id)?.name)) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    renderProducts();
+}
+
 
 function renderCategories() {
     const html = [`<button class="category-btn active" onclick="selectCat(null)">🏪 Toate</button>`];
