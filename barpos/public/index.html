@@ -964,252 +964,109 @@
             </div>
 
             <!-- Settings Tab -->
-            <div class="tab-content" id="tab-settings">
-                    <!-- Users Management (Admin Only) -->
-<div class="card mb-4 admin-only">
-    <div class="card-header">
-        <h3>👥 Gestionare Utilizatori</h3>
-        <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Adaugă Utilizator</button>
+            <!-- Settings Tab -->
+<div class="tab-content" id="tab-settings">
+    
+    <!-- Users Management (Admin Only) -->
+    <div class="card mb-4 admin-only">
+        <div class="card-header">
+            <h3>👥 Gestionare Utilizatori</h3>
+            <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Adaugă Utilizator</button>
+        </div>
+        <div class="card-body">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nume</th>
+                            <th>Parolă</th>
+                            <th>Rol</th>
+                            <th>Status</th>
+                            <th>Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nume</th>
-                        <th>Parolă</th>
-                        <th>Rol</th>
-                        <th>Status</th>
-                        <th>Acțiuni</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTable"></tbody>
-            </table>
+
+    <!-- Fiscal Printer Settings (Admin Only) -->
+    <div class="card mb-4 admin-only">
+        <div class="card-header">
+            <h3>🖨️ Casa de Marcat - Daisy Expert SX</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                ℹ️ Configurare conexiune pentru casa de marcat fiscală
+            </div>
+            <div class="form-group mb-4">
+                <label>
+                    <input type="checkbox" id="settingFiscoEnabled"> 
+                    <strong>Activează imprimarea fiscală</strong>
+                </label>
+            </div>
+            <div class="grid-2 mb-4">
+                <div class="form-group">
+                    <label>URL Fisco Driver</label>
+                    <input type="text" class="form-control" id="settingFiscoUrl" placeholder="http://localhost:4444">
+                </div>
+                <div class="form-group">
+                    <label>Port COM</label>
+                    <select class="form-control" id="settingFiscalPort">
+                        <option value="COM1">COM1</option>
+                        <option value="COM2">COM2</option>
+                        <option value="COM3">COM3</option>
+                        <option value="COM4">COM4</option>
+                        <option value="COM5">COM5</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <button class="btn btn-primary" onclick="testFiscoConnection()">🔌 Test Conexiune</button>
+                <button class="btn btn-secondary" onclick="openCashDrawer()">🗃️ Deschide Sertar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Info (Admin Only) -->
+    <div class="card mb-4 admin-only">
+        <div class="card-header">
+            <h3>🏢 Date Firmă</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label>Nume Firmă</label>
+                <input type="text" class="form-control" id="settingCompanyName" placeholder="Ex: Bar Central SRL">
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>CUI</label>
+                    <input type="text" class="form-control" id="settingCompanyCui" placeholder="Ex: RO12345678">
+                </div>
+                <div class="form-group">
+                    <label>Adresă</label>
+                    <input type="text" class="form-control" id="settingCompanyAddress" placeholder="Ex: Str. Principală nr. 1">
+                </div>
+            </div>
+            <button class="btn btn-success mt-4" onclick="saveAllSettings()">💾 Salvează Setările</button>
+        </div>
+    </div>
+
+    <!-- Theme Settings (All Users) -->
+    <div class="card">
+        <div class="card-header"><h3>🎨 Aspect</h3></div>
+        <div class="card-body">
+            <h4 class="mb-2">Temă</h4>
+            <div class="flex gap-2 mb-4">
+                <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Light</button>
+                <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dark</button>
+            </div>
+            <p class="text-muted">BarPOS v1.0 - Sistem de gestiune pentru bar/restaurant</p>
         </div>
     </div>
 </div>
 
-<!-- Fiscal Printer Settings (Admin Only) -->
-<div class="card mb-4 admin-only">
-    <div class="card-header">
-        <h3>🖨️ Casa de Marcat</h3>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info mb-4">
-            ℹ️ Configurare pentru casa de marcat Daisy Expert SX
-        </div>
-
-        <div class="form-group mb-4">
-            <label>
-                <input type="checkbox" id="settingFiscoEnabled"> 
-                <strong>Activează imprimarea fiscală</strong>
-            </label>
-        </div>
-        
-        <div class="grid-2 mb-4">
-            <div class="form-group">
-                <label>URL Fisco Driver</label>
-                <input type="text" class="form-control" id="settingFiscoUrl" placeholder="http://localhost:4444">
-            </div>
-            <div class="form-group">
-                <label>Port COM</label>
-                <select class="form-control" id="settingFiscalPort">
-                    <option value="COM1">COM1</option>
-                    <option value="COM2">COM2</option>
-                    <option value="COM3">COM3</option>
-                    <option value="COM4">COM4</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="flex gap-2 flex-wrap">
-            <button class="btn btn-primary" onclick="testFiscoConnection()">🔌 Test Conexiune</button>
-            <button class="btn btn-secondary" onclick="openCashDrawer()">🗃️ Deschide Sertar</button>
-        </div>
-    </div>
-</div>
-
-<!-- Company Info (Admin Only) -->
-<div class="card mb-4 admin-only">
-    <div class="card-header">
-        <h3>🏢 Date Firmă</h3>
-    </div>
-    <div class="card-body">
-        <div class="form-group">
-            <label>Nume Firmă</label>
-            <input type="text" class="form-control" id="settingCompanyName" placeholder="Ex: Bar Central SRL">
-        </div>
-        <div class="grid-2">
-            <div class="form-group">
-                <label>CUI</label>
-                <input type="text" class="form-control" id="settingCompanyCui" placeholder="Ex: RO12345678">
-            </div>
-            <div class="form-group">
-                <label>Adresă</label>
-                <input type="text" class="form-control" id="settingCompanyAddress" placeholder="Ex: Str. Principală nr. 1">
-            </div>
-        </div>
-        <button class="btn btn-success mt-4" onclick="saveAllSettings()">💾 Salvează Setările</button>
-    </div>
-</div>
-
-                <!-- Users Management (Admin Only) -->
-                <div class="card mb-4 admin-only">
-                    <div class="card-header">
-                        <h3>👥 Gestionare Utilizatori</h3>
-                        <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Adaugă Utilizator</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Nume</th>
-                                        <th>Parolă</th>
-                                        <th>Rol</th>
-                                        <th>Status</th>
-                                        <th>Acțiuni</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="usersTable"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Fiscal Printer Settings (Admin Only) -->
-                <div class="card mb-4 admin-only">
-                    <div class="card-header">
-                        <h3>🖨️ Casa de Marcat - Fisco Driver</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info mb-4">
-                            ℹ️ Configurare conexiune Fisco Driver pentru casa de marcat Daisy Expert SX
-                        </div>
-
-                        <div class="form-group mb-4">
-                            <label>
-                                <input type="checkbox" id="settingFiscoEnabled"> 
-                                <strong>Activează imprimarea fiscală</strong>
-                            </label>
-                        </div>
-                        
-                        <div class="grid-2 mb-4">
-                            <div class="form-group">
-                                <label>URL Fisco Driver</label>
-                                <input type="text" class="form-control" id="settingFiscoUrl" placeholder="http://localhost:4444">
-                                <small class="text-muted">Adresa unde rulează Fisco Driver</small>
-                            </div>
-                            <div class="form-group">
-                                <label>Port COM</label>
-                                <select class="form-control" id="settingFiscalPort">
-                                    <option value="COM1">COM1</option>
-                                    <option value="COM2">COM2</option>
-                                    <option value="COM3">COM3</option>
-                                    <option value="COM4">COM4</option>
-                                    <option value="COM5">COM5</option>
-                                    <option value="COM6">COM6</option>
-                                    <option value="COM7">COM7</option>
-                                    <option value="COM8">COM8</option>
-                                    <option value="COM9">COM9</option>
-                                    <option value="COM10">COM10</option>
-                                    <option value="COM11">COM11</option>
-                                    <option value="COM12">COM12</option>
-                                    <option value="COM13">COM13</option>
-                                    <option value="COM14">COM14</option>
-                                    <option value="COM15">COM15</option>
-                                    <option value="COM16">COM16</option>
-                                    <option value="COM17">COM17</option>
-                                    <option value="COM18">COM18</option>
-                                    <option value="COM19">COM19</option>
-                                    <option value="COM20">COM20</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid-2 mb-4">
-                            <div class="form-group">
-                                <label>Baud Rate</label>
-                                <select class="form-control" id="settingFiscalBaudrate">
-                                    <option value="1200">1200</option>
-                                    <option value="2400">2400</option>
-                                    <option value="4800">4800</option>
-                                    <option value="9600">9600 (Standard)</option>
-                                    <option value="19200">19200</option>
-                                    <option value="38400">38400</option>
-                                    <option value="57600">57600</option>
-                                    <option value="115200">115200</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Status Conexiune</label>
-                                <div id="fiscoStatus" class="alert" style="margin:0;padding:10px;background:var(--bg-tertiary);">
-                                    ⚪ Neconectat
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex gap-2 flex-wrap">
-                            <button class="btn btn-primary" onclick="testFiscoConnection()">🔌 Testează Conexiunea</button>
-                            <button class="btn btn-secondary" onclick="printFiscoTestReceipt()">🧾 Bon Test</button>
-                            <button class="btn btn-warning" onclick="getFiscoStatus()">📊 Status Casă</button>
-                            <button class="btn btn-secondary" onclick="openCashDrawer()">🗃️ Deschide Sertar</button>
-                        </div>
-
-                        <div class="mt-4">
-                            <h4 class="mb-2">📋 Log Comunicare</h4>
-                            <div id="fiscoLog" style="background:var(--bg-tertiary);border-radius:8px;padding:12px;max-height:150px;overflow-y:auto;font-family:monospace;font-size:12px;">
-                                <div class="text-muted">Nicio activitate...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Company Info (Admin Only) -->
-                <div class="card mb-4 admin-only">
-                    <div class="card-header">
-                        <h3>🏢 Date Firmă</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label>Nume Firmă</label>
-                            <input type="text" class="form-control" id="settingCompanyName" placeholder="Ex: Bar Central SRL">
-                        </div>
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label>CUI</label>
-                                <input type="text" class="form-control" id="settingCompanyCui" placeholder="Ex: RO12345678">
-                            </div>
-                            <div class="form-group">
-                                <label>Adresă</label>
-                                <input type="text" class="form-control" id="settingCompanyAddress" placeholder="Ex: Str. Principală nr. 1">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Save Button (Admin Only) -->
-                <div class="card mb-4 admin-only">
-                    <div class="card-body">
-                        <button class="btn btn-success btn-lg" onclick="saveAllSettings()">💾 Salvează Toate Setările</button>
-                    </div>
-                </div>
-
-                <!-- Theme Settings (All Users) -->
-                <div class="card">
-                    <div class="card-header"><h3>🎨 Aspect</h3></div>
-                    <div class="card-body">
-                        <h4 class="mb-2">Temă</h4>
-                        <div class="flex gap-2 mb-4">
-                            <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Light</button>
-                            <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dark</button>
-                        </div>
-
-                        <h4 class="mb-2">ℹ️ Despre</h4>
-                        <p class="text-muted">BarPOS v1.0 - Sistem de gestiune pentru bar/restaurant</p>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
 
