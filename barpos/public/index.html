@@ -1492,34 +1492,36 @@ async function checkAuth() {
 // APP INIT
 // ================================================
 async function initApp() {
-    // User info
     $('userAvatar').textContent = user.name[0].toUpperCase();
     $('userName').textContent = user.name;
     $('userRole').textContent = user.role === 'admin' ? 'Administrator' : 'Operator';
     
-    // Admin only elements
-    $$('.admin-only').forEach(el => el.style.display = user.role === 'admin' ? '' : 'none');
+    // IMPORTANT: Show admin-only elements for admin users
+    if (user.role === 'admin') {
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = 'block';
+        });
+    } else {
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
     
-    // Tabs
     initTabs();
-    initFilters();
     
-    // Load data
     await loadCategories();
     await loadProducts();
     await loadCashSummary();
-    await loadSettings();
     
     // Report dates
     const today = new Date().toISOString().split('T')[0];
-    const week = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
-    $('repFrom').value = week;
-    $('repTo').value = today;
+    if ($('repFrom')) $('repFrom').value = today;
+    if ($('repTo')) $('repTo').value = today;
     
-    // Time
     updateTime();
     setInterval(updateTime, 1000);
 }
+
 
 function initTabs() {
     $$('.nav-item').forEach(tab => {
