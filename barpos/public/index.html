@@ -907,31 +907,31 @@
             </div>
 
             <!-- Products Tab -->
-            <div class="tab-content" id="tab-products">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>🏷️ Gestionare Produse</h3>
-                        <button class="btn btn-primary btn-sm admin-only" onclick="openProduct()">+ Adaugă Produs</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-									<tr>
-										<th>Produs</th>
-										<th>Categorie</th>
-										<th>Preț</th>
-										<th>Stoc</th>
-										<th>Status</th>
-										<th class="admin-only">Acțiuni</th>
-									</tr>
-								</thead>
-                                <tbody id="prodTable"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+<div class="tab-content" id="tab-products">
+    <div class="card">
+        <div class="card-header">
+            <h3>🏷️ Gestionare Produse</h3>
+            <button class="btn btn-primary btn-sm" onclick="openProduct()">+ Adaugă Produs</button>
+        </div>
+        <div class="card-body">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Produs</th>
+                            <th>Categorie</th>
+                            <th>Preț</th>
+                            <th>Stoc</th>
+                            <th>Status</th>
+                            <th>Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prodTable"></tbody>
+                </table>
             </div>
+        </div>
+    </div>
+</div>
 
            <!-- Reports Tab -->
 <div class="tab-content" id="tab-reports">
@@ -2051,13 +2051,10 @@ async function loadProdTable() {
     }
     await loadProducts();
     
-    const isAdmin = user.role === 'admin';
-    
     if (!$('prodTable')) return;
     
     $('prodTable').innerHTML = products.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
-        // Folosește iconița produsului, sau a categoriei, sau default
         const icon = getIcon(p.icon) || getIcon(cat?.icon) || '📦';
         const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
         return `
@@ -2069,7 +2066,7 @@ async function loadProdTable() {
                 <td><span class="badge ${p.active !== false ? 'badge-success' : 'badge-muted'}">${p.active !== false ? 'Activ' : 'Inactiv'}</span></td>
                 <td>
                     <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️</button>
-                    ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>` : ''}
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
                 </td>
             </tr>
         `;
