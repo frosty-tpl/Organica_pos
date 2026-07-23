@@ -1261,46 +1261,72 @@
         </div>
     </div>
 
-    <!-- Product Modal -->
-    <div class="modal-overlay" id="prodModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 id="prodModalTitle">🏷️ Produs</h2>
-                <button class="modal-close" onclick="closeModal('prodModal')">✕</button>
-            </div>
-            <form id="prodForm">
-                <div class="modal-body">
-                    <input type="hidden" id="prodId">
-                    <div class="form-group">
-                        <label>Nume Produs</label>
-                        <input type="text" class="form-control" id="prodName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Categorie</label>
-                        <select class="form-control" id="prodCat" required></select>
-                    </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>Preț (RON)</label>
-                            <input type="number" class="form-control" id="prodPrice" step="0.01" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Stoc</label>
-                            <input type="number" class="form-control" id="prodStock" min="0" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Stoc Minim (alertă)</label>
-                        <input type="number" class="form-control" id="prodMinStock" min="0" value="10">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('prodModal')">Anulează</button>
-                    <button type="submit" class="btn btn-primary">💾 Salvează</button>
-                </div>
-            </form>
+   <!-- Product Modal -->
+<div class="modal-overlay" id="prodModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="prodModalTitle">🏷️ Produs</h2>
+            <button class="modal-close" onclick="closeModal('prodModal')">✕</button>
         </div>
+        <form id="prodForm">
+            <div class="modal-body">
+                <input type="hidden" id="prodId">
+                <div class="form-group">
+                    <label>Nume Produs</label>
+                    <input type="text" class="form-control" id="prodName" required placeholder="Ex: Heineken 500ml">
+                </div>
+                <div class="form-group">
+                    <label>Categorie</label>
+                    <select class="form-control" id="prodCat" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Iconiță Produs</label>
+                    <select class="form-control" id="prodIcon">
+                        <option value=":beer:">🍺 Bere</option>
+                        <option value=":wine:">🍷 Vin</option>
+                        <option value=":whisky:">🥃 Spirtoase</option>
+                        <option value=":cocktail:">🍹 Cocktail</option>
+                        <option value=":juice:">🥤 Suc</option>
+                        <option value=":coffee:">☕ Cafea</option>
+                        <option value=":tea:">🍵 Ceai</option>
+                        <option value=":water:">💧 Apă</option>
+                        <option value=":snack:">🍿 Snack</option>
+                        <option value=":food:">🍔 Mâncare</option>
+                        <option value=":pizza:">🍕 Pizza</option>
+                        <option value=":burger:">🍔 Burger</option>
+                        <option value=":fries:">🍟 Cartofi</option>
+                        <option value=":cake:">🍰 Desert</option>
+                        <option value=":ice:">🧊 Gheață</option>
+                        <option value=":lemon:">🍋 Lămâie</option>
+                        <option value=":orange:">🍊 Portocală</option>
+                        <option value=":apple:">🍎 Măr</option>
+                        <option value=":energy:">⚡ Energizant</option>
+                        <option value=":box:">📦 Altele</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Preț (RON)</label>
+                        <input type="number" class="form-control" id="prodPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Stoc</label>
+                        <input type="number" class="form-control" id="prodStock" min="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Stoc Minim (alertă)</label>
+                    <input type="number" class="form-control" id="prodMinStock" min="0" value="5">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('prodModal')">Anulează</button>
+                <button type="submit" class="btn btn-primary">💾 Salvează</button>
+            </div>
+        </form>
     </div>
+</div>
+
 
     <!-- Report Modal -->
     <div class="modal-overlay" id="repModal">
@@ -1981,10 +2007,11 @@ function renderInventory() {
     
     $('invTable').innerHTML = list.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
+        const icon = getIcon(p.icon) || getIcon(cat?.icon) || '📦';
         const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
         return `
             <tr>
-                <td><strong>${cat?.icon || '📦'} ${p.name}</strong></td>
+                <td><strong>${icon} ${p.name}</strong></td>
                 <td>${cat?.name || '-'}</td>
                 <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
                 <td>${fmt(p.price)} RON</td>
@@ -2010,7 +2037,6 @@ function openStock(id) {
 // PRODUCTS MANAGEMENT
 // ============================================
 async function loadProdTable() {
-    // Încarcă mai întâi categoriile, apoi produsele
     if (categories.length === 0) {
         await loadCategories();
     }
@@ -2022,10 +2048,12 @@ async function loadProdTable() {
     
     $('prodTable').innerHTML = products.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
+        // Folosește iconița produsului, sau a categoriei, sau default
+        const icon = getIcon(p.icon) || getIcon(cat?.icon) || '📦';
         const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
         return `
             <tr>
-                <td><strong>${cat?.icon || '📦'} ${p.name}</strong></td>
+                <td><strong>${icon} ${p.name}</strong></td>
                 <td>${cat?.name || '-'}</td>
                 <td>${fmt(p.price)} RON</td>
                 <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
@@ -2046,11 +2074,13 @@ function openProduct(id = null) {
     $('prodId').value = p?.id || '';
     $('prodName').value = p?.name || '';
     $('prodCat').value = p?.category_id || categories[0]?.id || '';
+    $('prodIcon').value = p?.icon || ':box:';
     $('prodPrice').value = p?.price || '';
     $('prodStock').value = p?.stock ?? 0;
     $('prodMinStock').value = p?.min_stock ?? 5;
     openModal('prodModal');
 }
+
 
 function deleteProduct(id) {
     const p = products.find(x => x.id === id);
@@ -2328,10 +2358,12 @@ function renderProducts() {
     }
     
     $('products').innerHTML = list.map(p => {
-        const stockClass = p.stock <= 0 ? 'out' : p.stock <= p.min_stock ? 'low' : '';
+        const cat = categories.find(c => c.id == p.category_id);
+        const icon = getIcon(p.icon) || getIcon(cat?.icon) || '📦';
+        const stockClass = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : '';
         return `
             <div class="product-card ${p.stock <= 0 ? 'disabled' : ''}" onclick="addToCart(${p.id})">
-                <div class="emoji">${p.category_icon || '📦'}</div>
+                <div class="emoji">${icon}</div>
                 <div class="name">${p.name}</div>
                 <div class="price">${fmt(p.price)} RON</div>
                 <div class="stock ${stockClass}">Stoc: ${p.stock}</div>
@@ -2339,6 +2371,7 @@ function renderProducts() {
         `;
     }).join('');
 }
+
 
 // ================================================
 // CART
@@ -2688,34 +2721,31 @@ function editProduct(id) {
 
 $('prodForm').onsubmit = async e => {
     e.preventDefault();
-    
-    const data = {
-        id: $('prodId').value || null,
-        name: $('prodName').value,
-        category_id: parseInt($('prodCat').value),
-        price: parseFloat($('prodPrice').value),
-        stock: parseInt($('prodStock').value),
-        min_stock: parseInt($('prodMinStock').value)
-    };
-    
-    closeModal('prodModal');
     loading(true);
-    
     try {
-        const res = await api('products', {
-            method: data.id ? 'PUT' : 'POST',
-            body: JSON.stringify(data)
+        const id = $('prodId').value;
+        const res = await api(`products?action=${id ? 'update' : 'create'}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                id: id || undefined,
+                name: $('prodName').value,
+                category_id: parseInt($('prodCat').value),
+                icon: $('prodIcon').value,
+                price: parseFloat($('prodPrice').value),
+                stock: parseInt($('prodStock').value),
+                min_stock: parseInt($('prodMinStock').value)
+            })
         });
-        
         if (res.success) {
-            toast(data.id ? 'Produs actualizat!' : 'Produs adăugat!');
+            closeModal('prodModal');
+            toast(id ? 'Produs actualizat!' : 'Produs adăugat!');
             await loadProducts();
-            loadProdTable();
+            await loadProdTable();
         }
     } catch (e) { toast(e.message, 'error'); }
-    
     loading(false);
 };
+
 
 function delProduct(id) {
     const p = products.find(x => x.id === id);
