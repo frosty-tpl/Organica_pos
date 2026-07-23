@@ -1,0 +1,2310 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarPOS - Sistem de Vânzare</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍺</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 15px rgba(0,0,0,0.1);
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #0ea5e9;
+            --radius: 10px;
+            --radius-lg: 14px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-lg: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-ghost { background: transparent; color: var(--text-secondary); }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+        .btn-lg { padding: 14px 28px; font-size: 16px; }
+        .btn-block { width: 100%; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus { outline: none; border-color: var(--accent); }
+        .form-control::placeholder { color: var(--text-muted); }
+        select.form-control { cursor: pointer; }
+        textarea.form-control { resize: vertical; min-height: 80px; }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body { padding: 20px; }
+
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);
+            padding: 20px;
+        }
+
+        .login-box {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-logo { text-align: center; margin-bottom: 24px; }
+        .login-logo .icon { font-size: 48px; }
+        .login-logo h1 { font-size: 28px; margin-top: 8px; }
+        .login-logo p { color: var(--text-muted); font-size: 14px; }
+
+        .app { display: none; }
+        
+        .header {
+            background: var(--bg-secondary);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .badge-cash { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .badge-status { background: rgba(59, 130, 246, 0.15); color: var(--accent); }
+        .badge-time { color: var(--text-muted); font-size: 12px; }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-name { font-weight: 600; font-size: 14px; }
+        .user-role { font-size: 11px; color: var(--text-muted); }
+
+        .nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        .nav-item {
+            padding: 14px 18px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover { color: var(--text-primary); }
+        .nav-item.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        .main { padding: 24px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .pos-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            height: calc(100vh - 180px);
+        }
+
+        .categories {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .category-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-btn:hover { border-color: var(--accent); }
+        .category-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+            padding: 4px;
+        }
+
+        .product-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            padding: 14px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .product-card.disabled { opacity: 0.4; pointer-events: none; }
+        .product-card .emoji { font-size: 28px; margin-bottom: 6px; }
+        .product-card .name { font-size: 11px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .product-card .price { font-size: 14px; font-weight: 700; color: var(--accent); }
+        .product-card .stock { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+        .product-card .stock.low { color: var(--warning); }
+        .product-card .stock.out { color: var(--danger); }
+
+        .cart {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .cart-items { flex: 1; overflow-y: auto; }
+
+        .cart-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        .cart-empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cart-item-info { flex: 1; min-width: 0; }
+        .cart-item-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cart-item-price { font-size: 12px; color: var(--text-muted); }
+
+        .cart-item-qty {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qty-btn:hover { background: var(--accent); color: white; }
+
+        .cart-item-total { font-weight: 700; min-width: 70px; text-align: right; }
+
+        .cart-footer {
+            border-top: 2px solid var(--text-primary);
+            padding-top: 16px;
+            margin-top: 16px;
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .cart-actions { display: flex; gap: 10px; }
+        .cart-actions .btn { flex: 1; }
+
+        .table-wrap { overflow-x: auto; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-tertiary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); }
+        tr:hover { background: var(--bg-tertiary); }
+
+        .badge {
+            display: inline-flex;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .badge-muted { background: var(--bg-tertiary); color: var(--text-muted); }
+        .badge-info { background: rgba(14, 165, 233, 0.15); color: var(--info); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--border);
+        }
+
+        .stat-card.primary { border-left-color: var(--accent); }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.danger { border-left-color: var(--danger); }
+
+        .stat-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .stat-value { font-size: 24px; font-weight: 800; }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .filter-btn {
+            padding: 6px 14px;
+            border: 2px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover { border-color: var(--accent); }
+        .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .filter-btn .count { opacity: 0.7; margin-left: 4px; }
+
+        .ops-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .op-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid var(--border);
+        }
+
+        .op-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .op-card.green { border-left-color: var(--success); }
+        .op-card.red { border-left-color: var(--danger); }
+        .op-card.blue { border-left-color: var(--info); }
+        .op-card.yellow { border-left-color: var(--warning); }
+
+        .op-card .icon { font-size: 32px; margin-bottom: 8px; }
+        .op-card .title { font-weight: 700; font-size: 14px; }
+        .op-card .desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal.lg { max-width: 700px; }
+        .modal.xl { max-width: 900px; }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 { font-size: 18px; display: flex; align-items: center; gap: 10px; }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .alert-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .alert-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .alert-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .alert-info { background: rgba(14, 165, 233, 0.15); color: var(--info); }
+
+        .payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+
+        .payment-btn {
+            padding: 28px;
+            border: 3px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .payment-btn:hover { border-color: var(--accent); }
+        .payment-btn.selected { border-color: var(--accent); background: rgba(59, 130, 246, 0.1); }
+        .payment-btn .icon { font-size: 36px; margin-bottom: 8px; }
+        .payment-btn .label { font-weight: 700; font-size: 16px; }
+
+        .cash-calc {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .cash-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .cash-row label { font-weight: 600; min-width: 80px; }
+        .cash-row input { flex: 1; font-size: 20px; text-align: right; padding: 12px; }
+
+        .change-box {
+            padding: 16px;
+            border-radius: var(--radius);
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .change-box.positive { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .change-box.negative { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+        .receipt {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border);
+            padding: 20px;
+            font-size: 12px;
+        }
+
+        .receipt-header { text-align: center; border-bottom: 1px dashed var(--border); padding-bottom: 12px; margin-bottom: 12px; }
+        .receipt-title { font-size: 14px; font-weight: bold; }
+        .receipt-row { display: flex; justify-content: space-between; padding: 3px 0; }
+        .receipt-divider { border-top: 1px dashed var(--border); margin: 10px 0; }
+        .receipt-total { font-weight: bold; font-size: 14px; }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.active { display: flex; }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toasts {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 14px 20px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.warning { background: var(--warning); }
+        .toast.info { background: var(--info); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 1024px) {
+            .pos-layout { grid-template-columns: 1fr; height: auto; }
+            .products-grid { max-height: 50vh; }
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 10px 16px; }
+            .nav { padding: 0 16px; }
+            .main { padding: 16px; }
+            .header-info { display: none; }
+            .nav-item { padding: 12px 14px; font-size: 13px; }
+        }
+
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-muted { color: var(--text-muted); }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .font-bold { font-weight: 700; }
+        .mb-0 { margin-bottom: 0; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-4 { margin-top: 16px; }
+        .flex { display: flex; }
+        .gap-2 { gap: 8px; }
+        .gap-4 { gap: 16px; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .flex-wrap { flex-wrap: wrap; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .admin-only { display: none; }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <div class="loading-overlay" id="loading"><div class="spinner"></div></div>
+    <div class="toasts" id="toasts"></div>
+
+    <!-- Login Page -->
+    <div class="login-page" id="loginPage">
+        <div class="login-box">
+            <div class="login-logo">
+                <div class="icon">🍺</div>
+                <h1>BarPOS</h1>
+                <p>Sistem de gestiune și vânzare</p>
+            </div>
+            <div id="loginError"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Utilizator</label>
+                    <input type="text" class="form-control" id="loginUser" placeholder="Nume utilizator" required>
+                </div>
+                <div class="form-group">
+                    <label>Parolă</label>
+                    <input type="password" class="form-control" id="loginPass" placeholder="Parola" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg btn-block">🔐 Autentificare</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App -->
+    <div class="app" id="app">
+        <header class="header">
+            <div class="header-brand"><span>🍺</span><span>BarPOS</span></div>
+            <div class="header-info">
+                <div class="header-badge badge-cash">💰 <span id="headerCash">0.00</span> RON</div>
+                <div class="header-badge badge-status">🟢 Online</div>
+                <div class="badge-time" id="headerTime"></div>
+                <div class="header-user">
+                    <div class="avatar" id="userAvatar">A</div>
+                    <div>
+                        <div class="user-name" id="userName">Admin</div>
+                        <div class="user-role" id="userRole">Administrator</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="toggleTheme()">🌓</button>
+                <button class="btn btn-secondary btn-sm" onclick="logout()">🚪 Ieșire</button>
+            </div>
+        </header>
+
+        <nav class="nav">
+            <button class="nav-item active" data-tab="pos">🛒 Vânzare</button>
+            <button class="nav-item" data-tab="cash">💰 Casă</button>
+            <button class="nav-item" data-tab="inventory">📦 Gestiune</button>
+            <button class="nav-item" data-tab="products">🏷️ Produse</button>
+            <button class="nav-item" data-tab="reports">📊 Rapoarte</button>
+            <button class="nav-item" data-tab="settings">⚙️ Setări</button>
+        </nav>
+
+        <main class="main">
+            <!-- POS Tab -->
+            <div class="tab-content active" id="tab-pos">
+                <div class="pos-layout">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="categories" id="categories"></div>
+                            <div class="products-grid" id="products"></div>
+                        </div>
+                    </div>
+                    <div class="card cart">
+                        <div class="card-header">
+                            <h3>🧾 Comandă curentă</h3>
+                            <span class="text-muted" id="cartCount">0 produse</span>
+                        </div>
+                        <div class="card-body" style="flex:1;display:flex;flex-direction:column;">
+                            <div class="cart-items" id="cartItems">
+                                <div class="cart-empty">
+                                    <div class="icon">🛒</div>
+                                    <div>Coșul este gol</div>
+                                </div>
+                            </div>
+                            <div class="cart-footer">
+                                <div class="cart-total">
+                                    <span>TOTAL</span>
+                                    <span id="cartTotal">0.00 RON</span>
+                                </div>
+                                <div class="cart-actions">
+                                    <button class="btn btn-danger" onclick="clearCart()">🗑️ Șterge</button>
+                                    <button class="btn btn-success btn-lg" onclick="openPayment()" id="btnPay">💳 Plată</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cash Tab -->
+            <div class="tab-content" id="tab-cash">
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-label">Sold Inițial</div><div class="stat-value" id="cashOpen">0</div></div>
+                    <div class="stat-card success"><div class="stat-label">Vânzări Cash</div><div class="stat-value" id="cashSales">0</div></div>
+                    <div class="stat-card success"><div class="stat-label">Depuneri</div><div class="stat-value" id="cashDeposits">0</div></div>
+                    <div class="stat-card danger"><div class="stat-label">Retrageri</div><div class="stat-value" id="cashWithdrawals">0</div></div>
+                    <div class="stat-card primary"><div class="stat-label">Sold Curent</div><div class="stat-value" id="cashCurrent">0</div></div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h3>💰 Operațiuni Casă</h3></div>
+                    <div class="card-body">
+                        <div class="ops-grid">
+                            <div class="op-card green" onclick="openCashOp('deposit')">
+                                <div class="icon">💵</div>
+                                <div class="title">Depunere</div>
+                                <div class="desc">Adaugă numerar</div>
+                            </div>
+                            <div class="op-card red" onclick="openCashOp('withdraw')">
+                                <div class="icon">💸</div>
+                                <div class="title">Retragere</div>
+                                <div class="desc">Scoate numerar</div>
+                            </div>
+                            <div class="op-card blue" onclick="genXReport()">
+                                <div class="icon">📋</div>
+                                <div class="title">Raport X</div>
+                                <div class="desc">Fără închidere</div>
+                            </div>
+                            <div class="op-card yellow admin-only" onclick="genZReport()">
+                                <div class="icon">📊</div>
+                                <div class="title">Raport Z</div>
+                                <div class="desc">Închidere zi</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>📋 Istoric Mișcări</h3></div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Ora</th><th>Tip</th><th>Descriere</th><th>Suma</th><th>Sold</th><th>Operator</th></tr></thead>
+                                <tbody id="cashTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div class="tab-content" id="tab-inventory">
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-label">Total Produse</div><div class="stat-value" id="invTotal">0</div></div>
+                    <div class="stat-card success"><div class="stat-label">În Stoc</div><div class="stat-value" id="invOk">0</div></div>
+                    <div class="stat-card warning"><div class="stat-label">Stoc Scăzut</div><div class="stat-value" id="invLow">0</div></div>
+                    <div class="stat-card danger"><div class="stat-label">Epuizate</div><div class="stat-value" id="invOut">0</div></div>
+                    <div class="stat-card primary"><div class="stat-label">Valoare Stoc</div><div class="stat-value" id="invValue">0</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📦 Gestiune Stoc</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="filters mb-4">
+                            <button class="filter-btn active" onclick="setInvFilter('all')">📦 Toate</button>
+                            <button class="filter-btn" onclick="setInvFilter('ok')">✅ OK</button>
+                            <button class="filter-btn" onclick="setInvFilter('low')">⚠️ Scăzut</button>
+                            <button class="filter-btn" onclick="setInvFilter('out')">❌ Epuizat</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Produs</th><th>Categorie</th><th>Stoc</th><th>Preț</th><th>Valoare</th><th>Acțiuni</th></tr></thead>
+                                <tbody id="invTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Tab -->
+            <div class="tab-content" id="tab-products">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🏷️ Gestionare Produse</h3>
+                        <button class="btn btn-primary btn-sm admin-only" onclick="openProduct()">+ Adaugă Produs</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Produs</th><th>Categorie</th><th>Preț</th><th>Stoc</th><th>Status</th><th class="admin-only">Acțiuni</th></tr></thead>
+                                <tbody id="prodTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div class="tab-content" id="tab-reports">
+                <div class="card mb-4">
+                    <div class="card-header"><h3>📊 Rapoarte Vânzări</h3></div>
+                    <div class="card-body">
+                        <div class="flex gap-4 flex-wrap items-center mb-4">
+                            <div class="form-group mb-0">
+                                <label>De la</label>
+                                <input type="date" class="form-control" id="repFrom">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label>Până la</label>
+                                <input type="date" class="form-control" id="repTo">
+                            </div>
+                            <button class="btn btn-primary" onclick="genSalesReport()" style="margin-top:22px;">📊 Generează</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card primary"><div class="stat-label">Total Vânzări</div><div class="stat-value" id="repTotal">0</div></div>
+                    <div class="stat-card success"><div class="stat-label">Numerar</div><div class="stat-value" id="repCash">0</div></div>
+                    <div class="stat-card warning"><div class="stat-label">Card</div><div class="stat-value" id="repCard">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Tranzacții</div><div class="stat-value" id="repTx">0</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>🏆 Top Produse</h3></div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Produs</th><th>Cantitate</th><th>Încasări</th></tr></thead>
+                                <tbody id="topTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="tab-settings">
+                
+                <!-- Users Management (Admin Only) -->
+                <div class="card mb-4 admin-only">
+                    <div class="card-header">
+                        <h3>👥 Gestionare Utilizatori</h3>
+                        <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Adaugă Utilizator</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nume</th>
+                                        <th>Parolă</th>
+                                        <th>Rol</th>
+                                        <th>Status</th>
+                                        <th>Acțiuni</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fiscal Printer Settings (Admin Only) -->
+                <div class="card mb-4 admin-only">
+                    <div class="card-header">
+                        <h3>🖨️ Casa de Marcat - Fisco Driver</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-4">
+                            ℹ️ Configurare conexiune Fisco Driver pentru casa de marcat Daisy Expert SX
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label>
+                                <input type="checkbox" id="settingFiscoEnabled"> 
+                                <strong>Activează imprimarea fiscală</strong>
+                            </label>
+                        </div>
+                        
+                        <div class="grid-2 mb-4">
+                            <div class="form-group">
+                                <label>URL Fisco Driver</label>
+                                <input type="text" class="form-control" id="settingFiscoUrl" placeholder="http://localhost:4444">
+                                <small class="text-muted">Adresa unde rulează Fisco Driver</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Port COM</label>
+                                <select class="form-control" id="settingFiscalPort">
+                                    <option value="COM1">COM1</option>
+                                    <option value="COM2">COM2</option>
+                                    <option value="COM3">COM3</option>
+                                    <option value="COM4">COM4</option>
+                                    <option value="COM5">COM5</option>
+                                    <option value="COM6">COM6</option>
+                                    <option value="COM7">COM7</option>
+                                    <option value="COM8">COM8</option>
+                                    <option value="COM9">COM9</option>
+                                    <option value="COM10">COM10</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid-2 mb-4">
+                            <div class="form-group">
+                                <label>Baud Rate</label>
+                                <select class="form-control" id="settingFiscalBaudrate">
+                                    <option value="9600">9600 (Standard)</option>
+                                    <option value="19200">19200</option>
+                                    <option value="38400">38400</option>
+                                    <option value="57600">57600</option>
+                                    <option value="115200">115200</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Status Conexiune</label>
+                                <div id="fiscoStatus" class="alert" style="margin:0;padding:10px;background:var(--bg-tertiary);">
+                                    ⚪ Neconectat
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 flex-wrap mb-4">
+                            <button class="btn btn-primary" onclick="testFiscoConnection()">🔌 Testează Conexiunea</button>
+                            <button class="btn btn-secondary" onclick="printFiscoTestReceipt()">🧾 Bon Test</button>
+                            <button class="btn btn-warning" onclick="getFiscoStatus()">📊 Status Casă</button>
+                            <button class="btn btn-secondary" onclick="openCashDrawer()">🗃️ Deschide Sertar</button>
+                        </div>
+
+                        <div class="mb-4">
+                            <h4 class="mb-2">📋 Log Comunicare</h4>
+                            <div id="fiscoLog" style="background:var(--bg-tertiary);border-radius:8px;padding:12px;max-height:150px;overflow-y:auto;font-family:monospace;font-size:12px;">
+                                <div class="text-muted">Nicio activitate...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Company Info (Admin Only) -->
+                <div class="card mb-4 admin-only">
+                    <div class="card-header">
+                        <h3>🏢 Date Firmă</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Nume Firmă</label>
+                            <input type="text" class="form-control" id="settingCompanyName" placeholder="Ex: Bar Central SRL">
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>CUI</label>
+                                <input type="text" class="form-control" id="settingCompanyCui" placeholder="Ex: RO12345678">
+                            </div>
+                            <div class="form-group">
+                                <label>Adresă</label>
+                                <input type="text" class="form-control" id="settingCompanyAddress" placeholder="Ex: Str. Principală nr. 1">
+                            </div>
+                        </div>
+                        <button class="btn btn-success mt-4" onclick="saveAllSettings()">💾 Salvează Setările</button>
+                    </div>
+                </div>
+
+                <!-- Theme Settings (All Users) -->
+                <div class="card">
+                    <div class="card-header"><h3>🎨 Aspect</h3></div>
+                    <div class="card-body">
+                        <h4 class="mb-2">Temă</h4>
+                        <div class="flex gap-2 mb-4">
+                            <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Light</button>
+                            <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dark</button>
+                        </div>
+                        <p class="text-muted">BarPOS v1.0 - Sistem de gestiune pentru bar/restaurant</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="payModal">
+        <div class="modal lg">
+            <div class="modal-header">
+                <h2>💳 Finalizare Plată</h2>
+                <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="stat-card primary mb-4" style="text-align:center;border-left:none;">
+                    <div class="stat-label">Total de plată</div>
+                    <div class="stat-value" id="payTotal" style="font-size:32px;">0.00 RON</div>
+                </div>
+
+                <div class="payment-options">
+                    <div class="payment-btn" onclick="selectPay('cash')" id="payCash">
+                        <div class="icon">💵</div>
+                        <div class="label">NUMERAR</div>
+                    </div>
+                    <div class="payment-btn" onclick="selectPay('card')" id="payCard">
+                        <div class="icon">💳</div>
+                        <div class="label">CARD</div>
+                    </div>
+                </div>
+
+                <div class="cash-calc hidden" id="cashCalc">
+                    <div class="cash-row">
+                        <label>Primit:</label>
+                        <input type="number" class="form-control" id="cashIn" step="0.01" oninput="calcChange()">
+                    </div>
+                    <div class="change-box positive" id="changeBox">Rest: 0.00 RON</div>
+                </div>
+
+                <div class="alert alert-info hidden" id="cardInfo" style="text-align:center;">
+                    💳 Procesați plata pe terminalul POS bancar
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-lg" onclick="closeModal('payModal')">Anulează</button>
+                <button class="btn btn-success btn-lg" onclick="confirmPay()" id="confirmPayBtn" disabled>✅ Confirmă Plata</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Operation Modal -->
+    <div class="modal-overlay" id="cashOpModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="cashOpTitle">💵 Operațiune</h2>
+                <button class="modal-close" onclick="closeModal('cashOpModal')">✕</button>
+            </div>
+            <form id="cashOpForm">
+                <div class="modal-body">
+                    <input type="hidden" id="cashOpType">
+                    <div class="form-group">
+                        <label>Suma (RON)</label>
+                        <input type="number" class="form-control" id="cashOpAmount" step="0.01" min="0.01" required style="font-size:24px;text-align:center;">
+                    </div>
+                    <div class="form-group">
+                        <label>Descriere</label>
+                        <textarea class="form-control" id="cashOpDesc" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('cashOpModal')">Anulează</button>
+                    <button type="submit" class="btn btn-primary" id="cashOpBtn">Confirmă</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stock Adjust Modal -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📦 Ajustare Stoc</h2>
+                <button class="modal-close" onclick="closeModal('stockModal')">✕</button>
+            </div>
+            <form id="stockForm">
+                <div class="modal-body">
+                    <input type="hidden" id="stockProdId">
+                    <div class="alert alert-info" id="stockInfo"></div>
+                    <div class="form-group">
+                        <label>Tip Ajustare</label>
+                        <select class="form-control" id="stockType">
+                            <option value="set">Setează valoare nouă</option>
+                            <option value="add">Adaugă la stoc</option>
+                            <option value="remove">Scade din stoc</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cantitate</label>
+                        <input type="number" class="form-control" id="stockQty" min="0" required style="font-size:20px;text-align:center;">
+                    </div>
+                    <div class="form-group">
+                        <label>Motiv</label>
+                        <textarea class="form-control" id="stockReason" rows="2" placeholder="Ex: Inventariere, Recepție marfă..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('stockModal')">Anulează</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal-overlay" id="prodModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="prodModalTitle">🏷️ Produs</h2>
+                <button class="modal-close" onclick="closeModal('prodModal')">✕</button>
+            </div>
+            <form id="prodForm">
+                <div class="modal-body">
+                    <input type="hidden" id="prodId">
+                    <div class="form-group">
+                        <label>Nume Produs</label>
+                        <input type="text" class="form-control" id="prodName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categorie</label>
+                        <select class="form-control" id="prodCat" required></select>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Preț (RON)</label>
+                            <input type="number" class="form-control" id="prodPrice" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Stoc</label>
+                            <input type="number" class="form-control" id="prodStock" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Stoc Minim (alertă)</label>
+                        <input type="number" class="form-control" id="prodMinStock" min="0" value="5">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('prodModal')">Anulează</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="userModalTitle">👤 Utilizator</h2>
+                <button class="modal-close" onclick="closeModal('userModal')">✕</button>
+            </div>
+            <form id="userForm">
+                <div class="modal-body">
+                    <input type="hidden" id="userId">
+                    <div class="form-group">
+                        <label>Nume Utilizator</label>
+                        <input type="text" class="form-control" id="userNameInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Parolă</label>
+                        <input type="text" class="form-control" id="userPassInput" required>
+                        <small class="text-muted">Parola este vizibilă pentru admin</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select class="form-control" id="userRoleInput">
+                            <option value="operator">Operator</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="userActiveGroup" style="display:none;">
+                        <label>Status</label>
+                        <select class="form-control" id="userActiveInput">
+                            <option value="true">Activ</option>
+                            <option value="false">Inactiv</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Anulează</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div class="modal-overlay" id="repModal">
+        <div class="modal lg">
+            <div class="modal-header">
+                <h2 id="repModalTitle">📊 Raport</h2>
+                <button class="modal-close" onclick="closeModal('repModal')">✕</button>
+            </div>
+            <div class="modal-body" id="repModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="printReport()">🖨️ Printează</button>
+                <button class="btn btn-primary" onclick="closeModal('repModal')">Închide</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>✅ Vânzare Finalizată!</h2>
+                <button class="modal-close" onclick="closeModal('receiptModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="receipt" id="receiptContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-block" onclick="closeModal('receiptModal')">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="confirmTitle">⚠️ Confirmare</h2>
+                <button class="modal-close" onclick="closeModal('confirmModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMsg"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Anulează</button>
+                <button class="btn btn-danger" onclick="execConfirm()" id="confirmBtn">Confirmă</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ============================================
+// CONFIG
+// ============================================
+const API = '/api';
+let token = localStorage.getItem('pos_token');
+let user = null;
+let categories = [];
+let products = [];
+let cart = [];
+let selectedCat = null;
+let invFilter = 'all';
+let payMethod = null;
+let confirmCb = null;
+let appSettings = {};
+
+// ============================================
+// HELPERS
+// ============================================
+const $ = id => document.getElementById(id);
+const $$ = sel => document.querySelectorAll(sel);
+const show = el => el?.classList.remove('hidden');
+const hide = el => el?.classList.add('hidden');
+const fmt = n => parseFloat(n || 0).toFixed(2);
+
+function loading(on) { $('loading').classList.toggle('active', on); }
+
+function toast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    $('toasts').appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+function openModal(id) { $(id).classList.add('active'); }
+function closeModal(id) { $(id).classList.remove('active'); }
+
+async function api(endpoint, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    const res = await fetch(`${API}/${endpoint}`, { ...options, headers });
+    const data = await res.json();
+    
+    if (!res.ok) {
+        if (res.status === 401) { logout(); }
+        throw new Error(data.error || 'Eroare server');
+    }
+    return data;
+}
+
+// ============================================
+// THEME
+// ============================================
+function setTheme(t) {
+    document.body.dataset.theme = t;
+    localStorage.setItem('pos_theme', t);
+}
+
+function toggleTheme() {
+    setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark');
+}
+
+// ============================================
+// AUTH
+// ============================================
+function showLogin() {
+    $('loginPage').style.display = 'flex';
+    $('app').style.display = 'none';
+}
+
+function showApp() {
+    $('loginPage').style.display = 'none';
+    $('app').style.display = 'block';
+}
+
+$('loginForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    try {
+        const res = await api('auth?action=login', {
+            method: 'POST',
+            body: JSON.stringify({
+                username: $('loginUser').value,
+                password: $('loginPass').value
+            })
+        });
+        if (res.success) {
+            token = res.data.token;
+            localStorage.setItem('pos_token', token);
+            user = res.data.user;
+            showApp();
+            initApp();
+            toast('Autentificare reușită!');
+        }
+    } catch (e) {
+        $('loginError').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+    }
+    loading(false);
+};
+
+async function logout() {
+    loading(true);
+    try { await api('auth?action=logout', { method: 'POST' }); } catch {}
+    token = null;
+    localStorage.removeItem('pos_token');
+    user = null;
+    cart = [];
+    showLogin();
+    loading(false);
+}
+
+async function checkAuth() {
+    if (!token) return showLogin();
+    loading(true);
+    try {
+        const res = await api('auth?action=check');
+        if (res.success) {
+            user = res.data.user;
+            showApp();
+            initApp();
+        } else showLogin();
+    } catch { showLogin(); }
+    loading(false);
+}
+
+// ============================================
+// APP INIT
+// ============================================
+async function initApp() {
+    $('userAvatar').textContent = user.name[0].toUpperCase();
+    $('userName').textContent = user.name;
+    $('userRole').textContent = user.role === 'admin' ? 'Administrator' : 'Operator';
+    
+    // Admin only elements
+    $$('.admin-only').forEach(el => el.style.display = user.role === 'admin' ? '' : 'none');
+    
+    initTabs();
+    
+    await loadCategories();
+    await loadProducts();
+    await loadCashSummary();
+    await loadSettings();
+    
+    // Report dates
+    const today = new Date().toISOString().split('T')[0];
+    $('repFrom').value = today;
+    $('repTo').value = today;
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+}
+
+function initTabs() {
+    $$('.nav-item').forEach(tab => {
+        tab.onclick = () => {
+            $$('.nav-item').forEach(t => t.classList.remove('active'));
+            $$('.tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            $(`tab-${tab.dataset.tab}`).classList.add('active');
+            
+            switch(tab.dataset.tab) {
+                case 'cash': loadCashSummary(); loadCashTx(); break;
+                case 'inventory': loadInventory(); break;
+                case 'products': loadProdTable(); break;
+                case 'reports': break;
+                case 'settings': loadUsers(); loadSettings(); break;
+            }
+        };
+    });
+}
+
+function updateTime() {
+    $('headerTime').textContent = new Date().toLocaleString('ro-RO');
+}
+
+// ============================================
+// CATEGORIES
+// ============================================
+async function loadCategories() {
+    try {
+        const res = await api('categories');
+        if (res.success) {
+            categories = res.data || [];
+            renderCategories();
+            populateCatSelect();
+        }
+    } catch (e) { console.error(e); }
+}
+
+function renderCategories() {
+    let html = `<button class="category-btn active" onclick="selectCat(null)">🏪 Toate</button>`;
+    categories.forEach(c => {
+        html += `<button class="category-btn" onclick="selectCat(${c.id})">${c.icon || '📦'} ${c.name}</button>`;
+    });
+    $('categories').innerHTML = html;
+}
+
+function populateCatSelect() {
+    const opts = categories.map(c => `<option value="${c.id}">${c.icon || '📦'} ${c.name}</option>`).join('');
+    $('prodCat').innerHTML = opts;
+}
+
+function selectCat(id) {
+    selectedCat = id;
+    $$('.category-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', id === null ? i === 0 : categories[i-1]?.id === id);
+    });
+    renderProducts();
+}
+
+// ============================================
+// PRODUCTS
+// ============================================
+async function loadProducts() {
+    try {
+        const res = await api('products');
+        if (res.success) {
+            products = res.data || [];
+            renderProducts();
+        }
+    } catch (e) { console.error(e); }
+}
+
+function renderProducts() {
+    let list = products;
+    if (selectedCat) list = products.filter(p => p.category_id == selectedCat);
+    
+    if (!list.length) {
+        $('products').innerHTML = '<div class="cart-empty"><div class="icon">📦</div><div>Niciun produs</div></div>';
+        return;
+    }
+    
+    $('products').innerHTML = list.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const stockClass = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : '';
+        return `
+            <div class="product-card ${p.stock <= 0 ? 'disabled' : ''}" onclick="addToCart(${p.id})">
+                <div class="emoji">${cat?.icon || '📦'}</div>
+                <div class="name">${p.name}</div>
+                <div class="price">${fmt(p.price)} RON</div>
+                <div class="stock ${stockClass}">Stoc: ${p.stock}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
+// CART
+// ============================================
+function addToCart(id) {
+    const p = products.find(x => x.id === id);
+    if (!p || p.stock <= 0) return;
+    
+    const item = cart.find(x => x.id === id);
+    if (item) {
+        if (item.qty < p.stock) item.qty++;
+        else { toast('Stoc insuficient!', 'warning'); return; }
+    } else {
+        cart.push({ id, name: p.name, price: parseFloat(p.price), qty: 1, max: p.stock });
+    }
+    renderCart();
+}
+
+function updateQty(id, d) {
+    const item = cart.find(x => x.id === id);
+    if (!item) return;
+    item.qty += d;
+    if (item.qty <= 0) cart = cart.filter(x => x.id !== id);
+    else if (item.qty > item.max) { item.qty = item.max; toast('Stoc maxim!', 'warning'); }
+    renderCart();
+}
+
+function renderCart() {
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    
+    if (!cart.length) {
+        $('cartItems').innerHTML = `<div class="cart-empty"><div class="icon">🛒</div><div>Coșul este gol</div></div>`;
+    } else {
+        $('cartItems').innerHTML = cart.map(i => `
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${i.name}</div>
+                    <div class="cart-item-price">${fmt(i.price)} × ${i.qty}</div>
+                </div>
+                <div class="cart-item-qty">
+                    <button class="qty-btn" onclick="updateQty(${i.id},-1)">−</button>
+                    <span>${i.qty}</span>
+                    <button class="qty-btn" onclick="updateQty(${i.id},1)">+</button>
+                </div>
+                <div class="cart-item-total">${fmt(i.price * i.qty)}</div>
+            </div>
+        `).join('');
+    }
+    
+    $('cartCount').textContent = `${cart.reduce((s,i) => s + i.qty, 0)} produse`;
+    $('cartTotal').textContent = `${fmt(total)} RON`;
+    $('btnPay').disabled = !cart.length;
+}
+
+function clearCart() {
+    cart = [];
+    renderCart();
+}
+
+// ============================================
+// PAYMENT
+// ============================================
+function openPayment() {
+    if (!cart.length) return;
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    $('payTotal').textContent = `${fmt(total)} RON`;
+    payMethod = null;
+    $('payCash').classList.remove('selected');
+    $('payCard').classList.remove('selected');
+    hide($('cashCalc'));
+    hide($('cardInfo'));
+    $('cashIn').value = '';
+    $('confirmPayBtn').disabled = true;
+    openModal('payModal');
+}
+
+function selectPay(method) {
+    payMethod = method;
+    $('payCash').classList.toggle('selected', method === 'cash');
+    $('payCard').classList.toggle('selected', method === 'card');
+    
+    if (method === 'cash') {
+        show($('cashCalc'));
+        hide($('cardInfo'));
+        $('cashIn').focus();
+        calcChange();
+    } else {
+        hide($('cashCalc'));
+        show($('cardInfo'));
+        $('confirmPayBtn').disabled = false;
+    }
+}
+
+function calcChange() {
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const received = parseFloat($('cashIn').value) || 0;
+    const change = received - total;
+    
+    const box = $('changeBox');
+    box.classList.toggle('positive', change >= 0);
+    box.classList.toggle('negative', change < 0);
+    box.textContent = change >= 0 ? `Rest: ${fmt(change)} RON` : `Lipsă: ${fmt(Math.abs(change))} RON`;
+    $('confirmPayBtn').disabled = change < 0;
+}
+
+async function confirmPay() {
+    if (!payMethod || !cart.length) return;
+    
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const cashIn = payMethod === 'cash' ? (parseFloat($('cashIn').value) || total) : 0;
+    
+    closeModal('payModal');
+    loading(true);
+    
+    try {
+        const res = await api('sales?action=create', {
+            method: 'POST',
+            body: JSON.stringify({
+                items: cart.map(i => ({ product_id: i.id, quantity: i.qty, price: i.price })),
+                payment_method: payMethod,
+                cash_received: cashIn,
+                total: total
+            })
+        });
+        
+        if (res.success) {
+            const change = cashIn - total;
+            
+            // Print fiscal receipt if enabled
+            if (appSettings.fisco_enabled === 'true') {
+                await printFiscalReceipt(res.data, cart, payMethod);
+            }
+            
+            // Show receipt
+            $('receiptContent').innerHTML = `
+                <div class="receipt-header">
+                    <div class="receipt-title">${appSettings.company_name || 'BarPOS'}</div>
+                    <div>${new Date().toLocaleString('ro-RO')}</div>
+                </div>
+                ${cart.map(i => `<div class="receipt-row"><span>${i.name} × ${i.qty}</span><span>${fmt(i.price * i.qty)}</span></div>`).join('')}
+                <div class="receipt-divider"></div>
+                <div class="receipt-row receipt-total"><span>TOTAL:</span><span>${fmt(total)} RON</span></div>
+                <div class="receipt-row"><span>${payMethod === 'cash' ? 'Numerar' : 'Card'}:</span><span>${fmt(payMethod === 'cash' ? cashIn : total)}</span></div>
+                ${change > 0 ? `<div class="receipt-row"><span>Rest:</span><span>${fmt(change)}</span></div>` : ''}
+            `;
+            openModal('receiptModal');
+            
+            cart = [];
+            renderCart();
+            await loadProducts();
+            await loadCashSummary();
+            toast('Vânzare finalizată!');
+        }
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+    
+    loading(false);
+}
+// ============================================
+// CASH MANAGEMENT
+// ============================================
+async function loadCashSummary() {
+    try {
+        const res = await api('cash?action=summary');
+        if (res.success) {
+            const d = res.data;
+            $('cashOpen').textContent = fmt(d.opening || 0);
+            $('cashSales').textContent = fmt(d.sales || 0);
+            $('cashDeposits').textContent = fmt(d.deposits || 0);
+            $('cashWithdrawals').textContent = fmt(d.withdrawals || 0);
+            $('cashCurrent').textContent = fmt(d.current || 0);
+            $('headerCash').textContent = fmt(d.current || 0);
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function loadCashTx() {
+    try {
+        const res = await api('cash?action=transactions');
+        if (res.success && res.data) {
+            $('cashTable').innerHTML = res.data.map(tx => `
+                <tr>
+                    <td>${new Date(tx.created_at).toLocaleTimeString('ro-RO')}</td>
+                    <td><span class="badge ${tx.type === 'sale' ? 'badge-success' : tx.type === 'deposit' ? 'badge-info' : 'badge-danger'}">${tx.type}</span></td>
+                    <td>${tx.description || '-'}</td>
+                    <td class="${tx.amount >= 0 ? 'text-success' : 'text-danger'}">${tx.amount >= 0 ? '+' : ''}${fmt(tx.amount)}</td>
+                    <td>${fmt(tx.balance)}</td>
+                    <td>${tx.user_name || '-'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-center text-muted">Nicio tranzacție</td></tr>';
+        }
+    } catch (e) { console.error(e); }
+}
+
+function openCashOp(type) {
+    $('cashOpType').value = type;
+    $('cashOpTitle').textContent = type === 'deposit' ? '💵 Depunere Numerar' : '💸 Retragere Numerar';
+    $('cashOpAmount').value = '';
+    $('cashOpDesc').value = '';
+    $('cashOpBtn').textContent = type === 'deposit' ? '💵 Depune' : '💸 Retrage';
+    $('cashOpBtn').className = `btn ${type === 'deposit' ? 'btn-success' : 'btn-danger'}`;
+    openModal('cashOpModal');
+}
+
+$('cashOpForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    try {
+        const res = await api('cash?action=operation', {
+            method: 'POST',
+            body: JSON.stringify({
+                type: $('cashOpType').value,
+                amount: parseFloat($('cashOpAmount').value),
+                description: $('cashOpDesc').value
+            })
+        });
+        if (res.success) {
+            closeModal('cashOpModal');
+            toast($('cashOpType').value === 'deposit' ? 'Depunere efectuată!' : 'Retragere efectuată!');
+            await loadCashSummary();
+            await loadCashTx();
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+};
+
+async function genXReport() {
+    loading(true);
+    try {
+        const res = await api('reports?action=x');
+        if (res.success) {
+            $('repModalTitle').textContent = '📋 Raport X';
+            $('repModalBody').innerHTML = `<div class="receipt">${formatReport(res.data)}</div>`;
+            openModal('repModal');
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
+async function genZReport() {
+    confirmAction('Sigur doriți să generați Raportul Z? Aceasta va închide ziua curentă.', async () => {
+        loading(true);
+        try {
+            const res = await api('reports?action=z', { method: 'POST' });
+            if (res.success) {
+                $('repModalTitle').textContent = '📊 Raport Z - ÎNCHIDERE ZI';
+                $('repModalBody').innerHTML = `<div class="receipt">${formatReport(res.data)}</div>`;
+                openModal('repModal');
+                await loadCashSummary();
+                toast('Ziua a fost închisă!');
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+function formatReport(d) {
+    return `
+        <div class="receipt-header">
+            <div class="receipt-title">${d.title || 'Raport'}</div>
+            <div>${d.date || new Date().toLocaleString('ro-RO')}</div>
+        </div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row"><span>Sold Deschidere:</span><span>${fmt(d.opening)}</span></div>
+        <div class="receipt-row"><span>Vânzări Numerar:</span><span>+${fmt(d.cash_sales)}</span></div>
+        <div class="receipt-row"><span>Vânzări Card:</span><span>${fmt(d.card_sales)}</span></div>
+        <div class="receipt-row"><span>Depuneri:</span><span>+${fmt(d.deposits)}</span></div>
+        <div class="receipt-row"><span>Retrageri:</span><span>-${fmt(d.withdrawals)}</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row receipt-total"><span>Total Vânzări:</span><span>${fmt(d.total_sales)}</span></div>
+        <div class="receipt-row receipt-total"><span>Sold Final:</span><span>${fmt(d.closing)}</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row"><span>Tranzacții:</span><span>${d.transactions || 0}</span></div>
+    `;
+}
+
+// ============================================
+// INVENTORY
+// ============================================
+async function loadInventory() {
+    await loadProducts();
+    
+    const total = products.length;
+    const ok = products.filter(p => p.stock > (p.min_stock || 5)).length;
+    const low = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5)).length;
+    const out = products.filter(p => p.stock <= 0).length;
+    const value = products.reduce((s, p) => s + p.stock * p.price, 0);
+    
+    $('invTotal').textContent = total;
+    $('invOk').textContent = ok;
+    $('invLow').textContent = low;
+    $('invOut').textContent = out;
+    $('invValue').textContent = fmt(value);
+    
+    renderInventory();
+}
+
+function setInvFilter(f) {
+    invFilter = f;
+    $$('.filters .filter-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(f) || (f === 'all' && btn.textContent.includes('Toate'))));
+    renderInventory();
+}
+
+function renderInventory() {
+    let list = products;
+    if (invFilter === 'ok') list = products.filter(p => p.stock > (p.min_stock || 5));
+    if (invFilter === 'low') list = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5));
+    if (invFilter === 'out') list = products.filter(p => p.stock <= 0);
+    
+    $('invTable').innerHTML = list.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        return `
+            <tr>
+                <td><strong>${cat?.icon || '📦'} ${p.name}</strong></td>
+                <td>${cat?.name || '-'}</td>
+                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
+                <td>${fmt(p.price)} RON</td>
+                <td>${fmt(p.stock * p.price)} RON</td>
+                <td><button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button></td>
+            </tr>
+        `;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
+}
+
+function openStock(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    $('stockProdId').value = id;
+    $('stockInfo').textContent = `${p.name} - Stoc actual: ${p.stock}`;
+    $('stockType').value = 'set';
+    $('stockQty').value = p.stock;
+    $('stockReason').value = '';
+    openModal('stockModal');
+}
+
+$('stockForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    try {
+        const res = await api('products?action=stock', {
+            method: 'POST',
+            body: JSON.stringify({
+                product_id: parseInt($('stockProdId').value),
+                type: $('stockType').value,
+                quantity: parseInt($('stockQty').value),
+                reason: $('stockReason').value
+            })
+        });
+        if (res.success) {
+            closeModal('stockModal');
+            toast('Stoc actualizat!');
+            await loadInventory();
+            await loadProducts();
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+};
+
+// ============================================
+// PRODUCTS MANAGEMENT
+// ============================================
+async function loadProdTable() {
+    await loadProducts();
+    const isAdmin = user.role === 'admin';
+    
+    $('prodTable').innerHTML = products.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        return `
+            <tr>
+                <td><strong>${cat?.icon || '📦'} ${p.name}</strong></td>
+                <td>${cat?.name || '-'}</td>
+                <td>${fmt(p.price)} RON</td>
+                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
+                <td><span class="badge ${p.active !== false ? 'badge-success' : 'badge-muted'}">${p.active !== false ? 'Activ' : 'Inactiv'}</span></td>
+                ${isAdmin ? `<td>
+                    <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
+                </td>` : ''}
+            </tr>
+        `;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
+}
+
+function openProduct(id = null) {
+    const p = id ? products.find(x => x.id === id) : null;
+    $('prodModalTitle').textContent = p ? '✏️ Editare Produs' : '➕ Produs Nou';
+    $('prodId').value = p?.id || '';
+    $('prodName').value = p?.name || '';
+    $('prodCat').value = p?.category_id || categories[0]?.id || '';
+    $('prodPrice').value = p?.price || '';
+    $('prodStock').value = p?.stock ?? 0;
+    $('prodMinStock').value = p?.min_stock ?? 5;
+    openModal('prodModal');
+}
+
+$('prodForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    try {
+        const id = $('prodId').value;
+        const res = await api(`products?action=${id ? 'update' : 'create'}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                id: id || undefined,
+                name: $('prodName').value,
+                category_id: parseInt($('prodCat').value),
+                price: parseFloat($('prodPrice').value),
+                stock: parseInt($('prodStock').value),
+                min_stock: parseInt($('prodMinStock').value)
+            })
+        });
+        if (res.success) {
+            closeModal('prodModal');
+            toast(id ? 'Produs actualizat!' : 'Produs adăugat!');
+            await loadProducts();
+            await loadProdTable();
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+};
+
+function deleteProduct(id) {
+    const p = products.find(x => x.id === id);
+    confirmAction(`Sigur ștergeți produsul "${p?.name}"?`, async () => {
+        loading(true);
+        try {
+            const res = await api('products?action=delete', {
+                method: 'POST',
+                body: JSON.stringify({ id })
+            });
+            if (res.success) {
+                toast('Produs șters!');
+                await loadProducts();
+                await loadProdTable();
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+// ============================================
+// REPORTS
+// ============================================
+async function genSalesReport() {
+    loading(true);
+    try {
+        const res = await api(`reports?action=sales&from=${$('repFrom').value}&to=${$('repTo').value}`);
+        if (res.success) {
+            const d = res.data;
+            $('repTotal').textContent = fmt(d.total);
+            $('repCash').textContent = fmt(d.cash);
+            $('repCard').textContent = fmt(d.card);
+            $('repTx').textContent = d.transactions;
+            
+            $('topTable').innerHTML = (d.top_products || []).map(p => `
+                <tr>
+                    <td>${p.name}</td>
+                    <td>${p.quantity}</td>
+                    <td>${fmt(p.revenue)} RON</td>
+                </tr>
+            `).join('') || '<tr><td colspan="3" class="text-center text-muted">Niciun produs vândut</td></tr>';
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
+// ============================================
+// USERS MANAGEMENT
+// ============================================
+async function loadUsers() {
+    if (user.role !== 'admin') return;
+    try {
+        const res = await api('users');
+        if (res.success) {
+            $('usersTable').innerHTML = (res.data || []).map(u => `
+                <tr>
+                    <td><strong>${u.name}</strong></td>
+                    <td><code>${u.password || '••••'}</code></td>
+                    <td><span class="badge ${u.role === 'admin' ? 'badge-warning' : 'badge-info'}">${u.role === 'admin' ? 'Admin' : 'Operator'}</span></td>
+                    <td><span class="badge ${u.active !== false ? 'badge-success' : 'badge-muted'}">${u.active !== false ? 'Activ' : 'Inactiv'}</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openUser(${u.id})">✏️</button>
+                        ${u.id !== user.id ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center text-muted">Niciun utilizator</td></tr>';
+        }
+    } catch (e) { console.error(e); }
+}
+
+function openUserModal() { openUser(null); }
+
+async function openUser(id) {
+    let u = null;
+    if (id) {
+        try {
+            const res = await api(`users?id=${id}`);
+            if (res.success) u = res.data;
+        } catch (e) { console.error(e); }
+    }
+    
+    $('userModalTitle').textContent = u ? '✏️ Editare Utilizator' : '➕ Utilizator Nou';
+    $('userId').value = u?.id || '';
+    $('userNameInput').value = u?.name || '';
+    $('userPassInput').value = u?.password || '';
+    $('userRoleInput').value = u?.role || 'operator';
+    $('userActiveInput').value = u?.active !== false ? 'true' : 'false';
+    $('userActiveGroup').style.display = u ? 'block' : 'none';
+    openModal('userModal');
+}
+
+$('userForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    try {
+        const id = $('userId').value;
+        const res = await api(`users?action=${id ? 'update' : 'create'}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                id: id || undefined,
+                name: $('userNameInput').value,
+                password: $('userPassInput').value,
+                role: $('userRoleInput').value,
+                active: $('userActiveInput').value === 'true'
+            })
+        });
+        if (res.success) {
+            closeModal('userModal');
+            toast(id ? 'Utilizator actualizat!' : 'Utilizator creat!');
+            await loadUsers();
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+};
+
+function deleteUser(id) {
+    confirmAction('Sigur ștergeți acest utilizator?', async () => {
+        loading(true);
+        try {
+            const res = await api('users?action=delete', { method: 'POST', body: JSON.stringify({ id }) });
+            if (res.success) {
+                toast('Utilizator șters!');
+                await loadUsers();
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+async function loadSettings() {
+    try {
+        const res = await api('settings');
+        if (res.success) {
+            appSettings = res.data || {};
+            $('settingCompanyName').value = appSettings.company_name || '';
+            $('settingCompanyCui').value = appSettings.company_cui || '';
+            $('settingCompanyAddress').value = appSettings.company_address || '';
+            $('settingFiscoEnabled').checked = appSettings.fisco_enabled === 'true';
+            $('settingFiscoUrl').value = appSettings.fisco_url || 'http://localhost:4444';
+            $('settingFiscalPort').value = appSettings.fiscal_port || 'COM1';
+            $('settingFiscalBaudrate').value = appSettings.fiscal_baudrate || '9600';
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function saveAllSettings() {
+    loading(true);
+    try {
+        const res = await api('settings?action=save', {
+            method: 'POST',
+            body: JSON.stringify({
+                company_name: $('settingCompanyName').value,
+                company_cui: $('settingCompanyCui').value,
+                company_address: $('settingCompanyAddress').value,
+                fisco_enabled: $('settingFiscoEnabled').checked ? 'true' : 'false',
+                fisco_url: $('settingFiscoUrl').value,
+                fiscal_port: $('settingFiscalPort').value,
+                fiscal_baudrate: $('settingFiscalBaudrate').value
+            })
+        });
+        if (res.success) {
+            toast('Setări salvate!');
+            await loadSettings();
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
+// ============================================
+// FISCO DRIVER INTEGRATION
+// ============================================
+function fiscoLog(msg, type = 'info') {
+    const log = $('fiscoLog');
+    const time = new Date().toLocaleTimeString('ro-RO');
+    const color = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--text-muted)';
+    log.innerHTML = `<div style="color:${color}">[${time}] ${msg}</div>` + log.innerHTML;
+}
+
+async function testFiscoConnection() {
+    const url = $('settingFiscoUrl').value;
+    fiscoLog(`Testare conexiune la ${url}...`);
+    $('fiscoStatus').innerHTML = '🟡 Se conectează...';
+    
+    try {
+        const res = await fetch(`${url}/api/status`, { method: 'GET', timeout: 5000 });
+        const data = await res.json();
+        if (data.success) {
+            $('fiscoStatus').innerHTML = '🟢 Conectat';
+            $('fiscoStatus').className = 'alert alert-success';
+            fiscoLog('Conexiune reușită!', 'success');
+        } else {
+            throw new Error(data.error || 'Eroare necunoscută');
+        }
+    } catch (e) {
+        $('fiscoStatus').innerHTML = '🔴 Eroare: ' + e.message;
+        $('fiscoStatus').className = 'alert alert-danger';
+        fiscoLog('Eroare: ' + e.message, 'error');
+    }
+}
+
+async function getFiscoStatus() {
+    const url = $('settingFiscoUrl').value;
+    fiscoLog('Citire status casă de marcat...');
+    
+    try {
+        const res = await fetch(`${url}/api/printer/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                port: $('settingFiscalPort').value,
+                baudrate: parseInt($('settingFiscalBaudrate').value)
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            fiscoLog(`Status: ${JSON.stringify(data.data)}`, 'success');
+            toast('Status citit cu succes!');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (e) {
+        fiscoLog('Eroare: ' + e.message, 'error');
+        toast(e.message, 'error');
+    }
+}
+
+async function printFiscoTestReceipt() {
+    const url = $('settingFiscoUrl').value;
+    fiscoLog('Printare bon test...');
+    
+    try {
+        const res = await fetch(`${url}/api/receipt/fiscal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                port: $('settingFiscalPort').value,
+                baudrate: parseInt($('settingFiscalBaudrate').value),
+                items: [{ name: 'TEST PRODUS', quantity: 1, price: 0.01, vat: 'A' }],
+                payments: [{ type: 'cash', amount: 0.01 }]
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            fiscoLog('Bon test printat!', 'success');
+            toast('Bon test printat!');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (e) {
+        fiscoLog('Eroare: ' + e.message, 'error');
+        toast(e.message, 'error');
+    }
+}
+
+async function openCashDrawer() {
+    const url = $('settingFiscoUrl').value;
+    fiscoLog('Deschidere sertar...');
+    
+    try {
+        const res = await fetch(`${url}/api/drawer/open`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                port: $('settingFiscalPort').value,
+                baudrate: parseInt($('settingFiscalBaudrate').value)
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            fiscoLog('Sertar deschis!', 'success');
+            toast('Sertar deschis!');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (e) {
+        fiscoLog('Eroare: ' + e.message, 'error');
+        toast(e.message, 'error');
+    }
+}
+
+async function printFiscalReceipt(sale, items, payMethod) {
+    if (appSettings.fisco_enabled !== 'true') return;
+    
+    const url = appSettings.fisco_url || 'http://localhost:4444';
+    fiscoLog('Printare bon fiscal...');
+    
+    try {
+        const res = await fetch(`${url}/api/receipt/fiscal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                port: appSettings.fiscal_port || 'COM1',
+                baudrate: parseInt(appSettings.fiscal_baudrate || '9600'),
+                items: items.map(i => ({
+                    name: i.name,
+                    quantity: i.qty,
+                    price: i.price,
+                    vat: 'A'
+                })),
+                payments: [{
+                    type: payMethod === 'cash' ? 'cash' : 'card',
+                    amount: items.reduce((s, i) => s + i.price * i.qty, 0)
+                }]
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            fiscoLog(`Bon fiscal #${data.receiptNumber || '?'} printat!`, 'success');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (e) {
+        fiscoLog('Eroare bon fiscal: ' + e.message, 'error');
+        console.error('Fiscal print error:', e);
+    }
+}
+
+// ============================================
+// CONFIRM DIALOG
+// ============================================
+function confirmAction(msg, cb) {
+    $('confirmMsg').textContent = msg;
+    confirmCb = cb;
+    openModal('confirmModal');
+}
+
+function execConfirm() {
+    closeModal('confirmModal');
+    if (confirmCb) confirmCb();
+    confirmCb = null;
+}
+
+function printReport() {
+    window.print();
+}
+
+// ============================================
+// INIT
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    const theme = localStorage.getItem('pos_theme') || 'dark';
+    setTheme(theme);
+    checkAuth();
+});
+</script>
+
+</body>
+</html>
