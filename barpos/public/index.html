@@ -2452,6 +2452,78 @@ function execConfirm() {
     confirmCb = null;
 }
 
+// ============================================
+// PRODUCTS TABLE MANAGEMENT
+// ============================================
+async function loadProdTable() {
+    if (categories.length === 0) {
+        await loadCategories();
+    }
+    await loadProducts();
+    
+    const tableBody = document.getElementById('prodTable');
+    if (!tableBody) {
+        console.error('prodTable not found');
+        return;
+    }
+    
+    tableBody.innerHTML = products.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
+        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        return `
+            <tr>
+                <td><strong>${icon} ${p.name}</strong></td>
+                <td>${cat?.name || '-'}</td>
+                <td>${fmt(p.price)} RON</td>
+                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
+                <td><span class="badge ${p.active !== false ? 'badge-success' : 'badge-muted'}">${p.active !== false ? 'Activ' : 'Inactiv'}</span></td>
+                <td>
+                    <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️ Editare</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️ Șterge</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    if (products.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
+    }
+}
+
+function openProduct(id = null) {
+    const p = id ? products.find(x => x.id === id) : null;
+    document.getElementById('prodModalTitle').textContent = p ? '✏️ Editare Produs' : '➕ Produs Nou';
+    document.getElementById('prodId').value = p?.id || '';
+    document.getElementById('prodName').value = p?.name || '';
+    document.getElementById('prodCat').value = p?.category_id || (categories[0]?.id || '');
+    document.getElementById('prodIcon').value = p?.icon || ':box:';
+    document.getElementById('prodPrice').value = p?.price || '';
+    document.getElementById('prodStock').value = p?.stock ?? 0;
+    document.getElementById('prodMinStock').value = p?.min_stock ?? 5;
+    openModal('prodModal');
+}
+
+function deleteProduct(id) {
+    const p = products.find(x => x.id === id);
+    confirmAction('Sigur ștergeți produsul "' + (p?.name || '') + '"?', async function() {
+        loading(true);
+        try {
+            const res = await api('products?action=delete', {
+                method: 'POST',
+                body: JSON.stringify({ id: id })
+            });
+            if (res.success) {
+                toast('Produs șters!');
+                await loadProducts();
+                await loadProdTable();
+            }
+        } catch (e) { 
+            toast(e.message, 'error'); 
+        }
+        loading(false);
+    });
+}
 	
 function renderProducts() {
     let list = products;
