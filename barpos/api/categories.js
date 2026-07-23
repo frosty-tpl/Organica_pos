@@ -1,8 +1,8 @@
-const { supabase, verifyToken } = require('../lib/db.js');
+import { supabase } from './lib/supabase.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
     if (req.method === 'OPTIONS') {
@@ -10,23 +10,20 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const user = await verifyToken({ headers: { get: (h) => req.headers[h.toLowerCase()] } });
-        if (!user) {
-            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        if (req.method === 'GET') {
+            const { data, error } = await supabase
+                .from('categories')
+                .select('*')
+                .order('sort_order', { ascending: true });
+            
+            if (error) throw error;
+            return res.json({ success: true, data });
         }
 
-        const { data, error } = await supabase
-            .from('categories')
-            .select('*')
-            .eq('active', true)
-            .order('sort_order')
-            .order('name');
+        return res.status(405).json({ success: false, error: 'Method not allowed' });
 
-        if (error) throw error;
-
-        return res.status(200).json({ success: true, data });
-    } catch (err) {
-        console.error('Categories error:', err);
-        return res.status(500).json({ success: false, error: err.message });
+    } catch (error) {
+        console.error('Categories Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
     }
-};
+}
