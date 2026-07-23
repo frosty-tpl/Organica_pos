@@ -5,7 +5,6 @@ const supabase = createClient(
     process.env.SUPABASE_ANON_KEY
 );
 
-
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -23,10 +22,11 @@ export default async function handler(req, res) {
             const { data, error } = await supabase
                 .from('products')
                 .select('*')
+                .eq('active', true)
                 .order('name', { ascending: true });
             
             if (error) throw error;
-            return res.json({ success: true, data });
+            return res.json({ success: true, data: data || [] });
         }
 
         // POST
@@ -44,6 +44,7 @@ export default async function handler(req, res) {
                         price: body.price,
                         stock: body.stock || 0,
                         min_stock: body.min_stock || 5,
+                        icon: body.icon || ':box:',
                         active: true
                     })
                     .select()
@@ -62,7 +63,8 @@ export default async function handler(req, res) {
                         category_id: body.category_id,
                         price: body.price,
                         stock: body.stock,
-                        min_stock: body.min_stock
+                        min_stock: body.min_stock,
+                        icon: body.icon
                     })
                     .eq('id', parseInt(body.id))
                     .select()
@@ -74,11 +76,13 @@ export default async function handler(req, res) {
 
             // STOCK ADJUSTMENT
             if (action === 'stock') {
-                const { data: product } = await supabase
+                const { data: product, error: fetchError } = await supabase
                     .from('products')
                     .select('stock')
                     .eq('id', body.product_id)
                     .single();
+                
+                if (fetchError) throw fetchError;
                 
                 let newStock = product.stock;
                 if (body.type === 'set') newStock = body.quantity;
@@ -100,7 +104,7 @@ export default async function handler(req, res) {
             if (action === 'delete') {
                 const { error } = await supabase
                     .from('products')
-                    .delete()
+                    .update({ active: false })
                     .eq('id', parseInt(body.id));
                 
                 if (error) throw error;
