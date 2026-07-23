@@ -1728,6 +1728,11 @@ function formatReport(d) {
 // INVENTORY
 // ============================================
 async function loadInventory() {
+    // Încarcă mai întâi categoriile
+    if (categories.length === 0) {
+        await loadCategories();
+    }
+    
     try {
         const res = await api('inventory?action=list&status=' + invFilter);
         if (res.success) {
@@ -1744,7 +1749,6 @@ async function loadInventory() {
         }
     } catch (e) { 
         console.error('Inventory error:', e); 
-        // Fallback - use products API
         await loadProducts();
         
         const total = products.length;
@@ -1817,7 +1821,12 @@ function openStock(id) {
 // PRODUCTS MANAGEMENT
 // ============================================
 async function loadProdTable() {
+    // Încarcă mai întâi categoriile, apoi produsele
+    if (categories.length === 0) {
+        await loadCategories();
+    }
     await loadProducts();
+    
     const isAdmin = user.role === 'admin';
     
     if (!$('prodTable')) return;
@@ -1832,14 +1841,15 @@ async function loadProdTable() {
                 <td>${fmt(p.price)} RON</td>
                 <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
                 <td><span class="badge ${p.active !== false ? 'badge-success' : 'badge-muted'}">${p.active !== false ? 'Activ' : 'Inactiv'}</span></td>
-                ${isAdmin ? `<td>
+                <td>
                     <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
-                </td>` : ''}
+                    ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>` : ''}
+                </td>
             </tr>
         `;
     }).join('') || '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
 }
+
 
 function openProduct(id = null) {
     const p = id ? products.find(x => x.id === id) : null;
