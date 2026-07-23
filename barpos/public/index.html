@@ -1728,22 +1728,41 @@ function formatReport(d) {
 // INVENTORY
 // ============================================
 async function loadInventory() {
-    await loadProducts();
-    
-    const total = products.length;
-    const ok = products.filter(p => p.stock > (p.min_stock || 5)).length;
-    const low = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5)).length;
-    const out = products.filter(p => p.stock <= 0).length;
-    const value = products.reduce((s, p) => s + (p.stock || 0) * (parseFloat(p.price) || 0), 0);
-    
-    if ($('invTotal')) $('invTotal').textContent = total;
-    if ($('invOk')) $('invOk').textContent = ok;
-    if ($('invLow')) $('invLow').textContent = low;
-    if ($('invOut')) $('invOut').textContent = out;
-    if ($('invValue')) $('invValue').textContent = fmt(value);
-    
-    renderInventory();
+    try {
+        const res = await api('inventory?action=list&status=' + invFilter);
+        if (res.success) {
+            products = res.data || [];
+            
+            const stats = res.stats || {};
+            if ($('invTotal')) $('invTotal').textContent = stats.total || 0;
+            if ($('invOk')) $('invOk').textContent = stats.ok || 0;
+            if ($('invLow')) $('invLow').textContent = stats.low || 0;
+            if ($('invOut')) $('invOut').textContent = stats.out || 0;
+            if ($('invValue')) $('invValue').textContent = fmt(stats.value || 0);
+            
+            renderInventory();
+        }
+    } catch (e) { 
+        console.error('Inventory error:', e); 
+        // Fallback - use products API
+        await loadProducts();
+        
+        const total = products.length;
+        const ok = products.filter(p => p.stock > (p.min_stock || 5)).length;
+        const low = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5)).length;
+        const out = products.filter(p => p.stock <= 0).length;
+        const value = products.reduce((s, p) => s + (p.stock || 0) * (parseFloat(p.price) || 0), 0);
+        
+        if ($('invTotal')) $('invTotal').textContent = total;
+        if ($('invOk')) $('invOk').textContent = ok;
+        if ($('invLow')) $('invLow').textContent = low;
+        if ($('invOut')) $('invOut').textContent = out;
+        if ($('invValue')) $('invValue').textContent = fmt(value);
+        
+        renderInventory();
+    }
 }
+
 
 function setInvFilter(f) {
     invFilter = f;
@@ -2292,58 +2311,6 @@ async function genZReport() {
     });
 }
 
-// ================================================
-// INVENTORY
-// ================================================
-async function loadInventory() {
-    const catId = $('invCatFilter').value;
-    loading(true);
-    
-    try {
-        const res = await api(`inventory?action=list&category_id=${catId}&status=${invFilter}`);
-        if (res.success) {
-            const { products: items, counts } = res.data;
-            
-            // Stats
-            $('invTotal').textContent = counts.total;
-            $('invOk').textContent = counts.ok;
-            $('invLow').textContent = parseInt(counts.low) + parseInt(counts.critical);
-            $('invOut').textContent = counts.out;
-            
-            const totalVal = items.reduce((s, p) => s + parseFloat(p.stock_value || 0), 0);
-            $('invValue').textContent = fmt(totalVal);
-            
-            // Filter counts
-            $('fAll').textContent = counts.total;
-            $('fOk').textContent = counts.ok;
-            $('fLow').textContent = counts.low;
-            $('fCrit').textContent = counts.critical;
-            $('fOut').textContent = counts.out;
-            
-            // Table
-            if (!items.length) {
-                $('invTable').innerHTML = '<tr><td colspan="7" class="text-center text-muted">Niciun produs găsit</td></tr>';
-            } else {
-                const badges = { ok: 'badge-success', low: 'badge-warning', critical: 'badge-danger', out: 'badge-muted' };
-                const labels = { ok: 'OK', low: 'Scăzut', critical: 'Critic', out: 'Epuizat' };
-                
-                $('invTable').innerHTML = items.map(p => `
-                    <tr>
-                        <td><strong>${p.category_icon} ${p.name}</strong></td>
-                        <td>${p.category_name}</td>
-                        <td><strong>${p.stock}</strong> <span class="text-muted">/ min ${p.min_stock}</span></td>
-                        <td><span class="badge ${badges[p.stock_status]}">${labels[p.stock_status]}</span></td>
-                        <td>${fmt(p.price)} RON</td>
-                        <td><strong>${fmt(p.stock_value)}</strong> RON</td>
-                        <td><button class="btn btn-primary btn-sm" onclick="openStock(${p.id})">📦 Ajustează</button></td>
-                    </tr>
-                `).join('');
-            }
-        }
-    } catch (e) { console.error(e); }
-    
-    loading(false);
-}
 
 function openStock(id) {
     const p = products.find(x => x.id === id);
