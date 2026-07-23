@@ -906,7 +906,8 @@
                 </div>
             </div>
 
-            <!-- Products Tab -->
+          
+<!-- Products Tab -->
 <div class="tab-content" id="tab-products">
     <div class="card">
         <div class="card-header">
@@ -2260,6 +2261,70 @@ function deleteUser(id) {
     });
 }
 
+	// ============================================
+// PRODUCTS TABLE MANAGEMENT
+// ============================================
+async function loadProdTable() {
+    if (categories.length === 0) {
+        await loadCategories();
+    }
+    await loadProducts();
+    
+    if (!$('prodTable')) return;
+    
+    $('prodTable').innerHTML = products.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
+        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        return `
+            <tr>
+                <td><strong>${icon} ${p.name}</strong></td>
+                <td>${cat?.name || '-'}</td>
+                <td>${fmt(p.price)} RON</td>
+                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
+                <td><span class="badge ${p.active !== false ? 'badge-success' : 'badge-muted'}">${p.active !== false ? 'Activ' : 'Inactiv'}</span></td>
+                <td>
+                    <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
+                </td>
+            </tr>
+        `;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
+}
+
+function openProduct(id = null) {
+    const p = id ? products.find(x => x.id === id) : null;
+    $('prodModalTitle').textContent = p ? '✏️ Editare Produs' : '➕ Produs Nou';
+    $('prodId').value = p?.id || '';
+    $('prodName').value = p?.name || '';
+    $('prodCat').value = p?.category_id || categories[0]?.id || '';
+    $('prodIcon').value = p?.icon || ':box:';
+    $('prodPrice').value = p?.price || '';
+    $('prodStock').value = p?.stock ?? 0;
+    $('prodMinStock').value = p?.min_stock ?? 5;
+    openModal('prodModal');
+}
+
+function deleteProduct(id) {
+    const p = products.find(x => x.id === id);
+    confirmAction(`Sigur ștergeți produsul "${p?.name}"?`, async () => {
+        loading(true);
+        try {
+            const res = await api('products?action=delete', {
+                method: 'POST',
+                body: JSON.stringify({ id })
+            });
+            if (res.success) {
+                toast('Produs șters!');
+                await loadProducts();
+                await loadProdTable();
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+	
 // ============================================
 // CATEGORIES MANAGEMENT
 // ============================================
