@@ -1628,6 +1628,417 @@ async function loadProducts() {
     } catch (e) { console.error(e); }
 }
 
+// ============================================
+// CASH MANAGEMENT
+// ============================================
+async function loadCashSummary() {
+    try {
+        const res = await api('cash?action=summary');
+        if (res.success) {
+            const d = res.data;
+            if ($('cashOpen')) $('cashOpen').textContent = fmt(d.opening || 0);
+            if ($('cashSales')) $('cashSales').textContent = fmt(d.sales || 0);
+            if ($('cashDeposits')) $('cashDeposits').textContent = fmt(d.deposits || 0);
+            if ($('cashWithdrawals')) $('cashWithdrawals').textContent = fmt(d.withdrawals || 0);
+            if ($('cashCurrent')) $('cashCurrent').textContent = fmt(d.current || 0);
+            if ($('headerCash')) $('headerCash').textContent = fmt(d.current || 0);
+        }
+    } catch (e) { console.error('Cash summary error:', e); }
+}
+
+async function loadCashTx() {
+    try {
+        const res = await api('cash?action=transactions');
+        if (res.success && $('cashTable')) {
+            $('cashTable').innerHTML = (res.data || []).map(tx => `
+                <tr>
+                    <td>${new Date(tx.created_at).toLocaleTimeString('ro-RO')}</td>
+                    <td><span class="badge ${tx.type === 'sale' ? 'badge-success' : tx.type === 'deposit' ? 'badge-info' : 'badge-danger'}">${tx.type}</span></td>
+                    <td>${tx.description || '-'}</td>
+                    <td class="${parseFloat(tx.amount) >= 0 ? 'text-success' : 'text-danger'}">${parseFloat(tx.amount) >= 0 ? '+' : ''}${fmt(tx.amount)}</td>
+                    <td>${fmt(tx.balance)}</td>
+                    <td>${tx.user_name || '-'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-center text-muted">Nicio tranzacție</td></tr>';
+        }
+    } catch (e) { console.error('Cash transactions error:', e); }
+}
+
+function openCashOp(type) {
+    $('cashOpType').value = type;
+    $('cashOpTitle').textContent = type === 'deposit' ? '💵 Depunere Numerar' : '💸 Retragere Numerar';
+    $('cashOpAmount').value = '';
+    $('cashOpDesc').value = '';
+    $('cashOpBtn').textContent = type === 'deposit' ? '💵 Depune' : '💸 Retrage';
+    $('cashOpBtn').className = `btn ${type === 'deposit' ? 'btn-success' : 'btn-danger'}`;
+    openModal('cashOpModal');
+}
+
+async function genXReport() {
+    loading(true);
+    try {
+        const res = await api('reports?action=x');
+        if (res.success) {
+            $('repModalTitle').textContent = '📋 Raport X';
+            $('repModalBody').innerHTML = `<div class="receipt">${formatReport(res.data)}</div>`;
+            openModal('repModal');
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
+async function genZReport() {
+    confirmAction('Sigur doriți să generați Raportul Z? Aceasta va închide ziua curentă.', async () => {
+        loading(true);
+        try {
+            const res = await api('reports?action=z', { method: 'POST' });
+            if (res.success) {
+                $('repModalTitle').textContent = '📊 Raport Z - ÎNCHIDERE ZI';
+                $('repModalBody').innerHTML = `<div class="receipt">${formatReport(res.data)}</div>`;
+                openModal('repModal');
+                await loadCashSummary();
+                toast('Ziua a fost închisă!');
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+function formatReport(d) {
+    return `
+        <div class="receipt-header">
+            <div class="receipt-title">${d.title || 'Raport'}</div>
+            <div>${d.date || new Date().toLocaleString('ro-RO')}</div>
+        </div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row"><span>Sold Deschidere:</span><span>${fmt(d.opening)}</span></div>
+        <div class="receipt-row"><span>Vânzări Numerar:</span><span>+${fmt(d.cash_sales)}</span></div>
+        <div class="receipt-row"><span>Vânzări Card:</span><span>${fmt(d.card_sales)}</span></div>
+        <div class="receipt-row"><span>Depuneri:</span><span>+${fmt(d.deposits)}</span></div>
+        <div class="receipt-row"><span>Retrageri:</span><span>-${fmt(d.withdrawals)}</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row receipt-total"><span>Total Vânzări:</span><span>${fmt(d.total_sales)}</span></div>
+        <div class="receipt-row receipt-total"><span>Sold Final:</span><span>${fmt(d.closing)}</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row"><span>Tranzacții:</span><span>${d.transactions || 0}</span></div>
+    `;
+}
+
+// ============================================
+// INVENTORY
+// ============================================
+async function loadInventory() {
+    await loadProducts();
+    
+    const total = products.length;
+    const ok = products.filter(p => p.stock > (p.min_stock || 5)).length;
+    const low = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5)).length;
+    const out = products.filter(p => p.stock <= 0).length;
+    const value = products.reduce((s, p) => s + (p.stock || 0) * (parseFloat(p.price) || 0), 0);
+    
+    if ($('invTotal')) $('invTotal').textContent = total;
+    if ($('invOk')) $('invOk').textContent = ok;
+    if ($('invLow')) $('invLow').textContent = low;
+    if ($('invOut')) $('invOut').textContent = out;
+    if ($('invValue')) $('invValue').textContent = fmt(value);
+    
+    renderInventory();
+}
+
+function setInvFilter(f) {
+    invFilter = f;
+    document.querySelectorAll('.filters .filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if ((f === 'all' && btn.textContent.includes('Toate')) ||
+            (f === 'ok' && btn.textContent.includes('OK')) ||
+            (f === 'low' && btn.textContent.includes('Scăzut')) ||
+            (f === 'out' && btn.textContent.includes('Epuizat'))) {
+            btn.classList.add('active');
+        }
+    });
+    renderInventory();
+}
+
+function renderInventory() {
+    let list = products;
+    if (invFilter === 'ok') list = products.filter(p => p.stock > (p.min_stock || 5));
+    if (invFilter === 'low') list = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5));
+    if (invFilter === 'out') list = products.filter(p => p.stock <= 0);
+    
+    if (!$('invTable')) return;
+    
+    $('invTable').innerHTML = list.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        return `
+            <tr>
+                <td><strong>${cat?.icon || '📦'} ${p.name}</strong></td>
+                <td>${cat?.name || '-'}</td>
+                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
+                <td>${fmt(p.price)} RON</td>
+                <td>${fmt((p.stock || 0) * (parseFloat(p.price) || 0))} RON</td>
+                <td><button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button></td>
+            </tr>
+        `;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
+}
+
+function openStock(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    $('stockProdId').value = id;
+    $('stockInfo').textContent = `${p.name} - Stoc actual: ${p.stock}`;
+    $('stockType').value = 'set';
+    $('stockQty').value = p.stock;
+    $('stockReason').value = '';
+    openModal('stockModal');
+}
+
+// ============================================
+// PRODUCTS MANAGEMENT
+// ============================================
+async function loadProdTable() {
+    await loadProducts();
+    const isAdmin = user.role === 'admin';
+    
+    if (!$('prodTable')) return;
+    
+    $('prodTable').innerHTML = products.map(p => {
+        const cat = categories.find(c => c.id == p.category_id);
+        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        return `
+            <tr>
+                <td><strong>${cat?.icon || '📦'} ${p.name}</strong></td>
+                <td>${cat?.name || '-'}</td>
+                <td>${fmt(p.price)} RON</td>
+                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
+                <td><span class="badge ${p.active !== false ? 'badge-success' : 'badge-muted'}">${p.active !== false ? 'Activ' : 'Inactiv'}</span></td>
+                ${isAdmin ? `<td>
+                    <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
+                </td>` : ''}
+            </tr>
+        `;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Niciun produs</td></tr>';
+}
+
+function openProduct(id = null) {
+    const p = id ? products.find(x => x.id === id) : null;
+    $('prodModalTitle').textContent = p ? '✏️ Editare Produs' : '➕ Produs Nou';
+    $('prodId').value = p?.id || '';
+    $('prodName').value = p?.name || '';
+    $('prodCat').value = p?.category_id || categories[0]?.id || '';
+    $('prodPrice').value = p?.price || '';
+    $('prodStock').value = p?.stock ?? 0;
+    $('prodMinStock').value = p?.min_stock ?? 5;
+    openModal('prodModal');
+}
+
+function deleteProduct(id) {
+    const p = products.find(x => x.id === id);
+    confirmAction(`Sigur ștergeți produsul "${p?.name}"?`, async () => {
+        loading(true);
+        try {
+            const res = await api('products?action=delete', {
+                method: 'POST',
+                body: JSON.stringify({ id })
+            });
+            if (res.success) {
+                toast('Produs șters!');
+                await loadProducts();
+                await loadProdTable();
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+// ============================================
+// REPORTS
+// ============================================
+async function loadUserFilter() {
+    if (user.role !== 'admin') return;
+    
+    try {
+        const res = await api('users');
+        if (res.success && $('repUserFilter')) {
+            const options = '<option value="all">👥 Toți utilizatorii</option>' + 
+                (res.data || []).map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+            $('repUserFilter').innerHTML = options;
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function genSalesReport() {
+    loading(true);
+    try {
+        let url = `reports?action=sales&from=${$('repFrom').value}&to=${$('repTo').value}`;
+        
+        if (user.role === 'admin') {
+            const userFilter = $('repUserFilter')?.value || 'all';
+            if (userFilter !== 'all') {
+                url += `&user_id=${userFilter}`;
+            }
+        } else {
+            url += `&user_id=${user.id}`;
+        }
+        
+        const res = await api(url);
+        if (res.success) {
+            const d = res.data;
+            $('repTotal').textContent = fmt(d.total);
+            $('repCash').textContent = fmt(d.cash);
+            $('repCard').textContent = fmt(d.card);
+            $('repTx').textContent = d.transactions;
+            
+            $('topTable').innerHTML = (d.top_products || []).map(p => `
+                <tr>
+                    <td>${p.name}</td>
+                    <td>${p.quantity}</td>
+                    <td>${fmt(p.revenue)} RON</td>
+                </tr>
+            `).join('') || '<tr><td colspan="3" class="text-center text-muted">Niciun produs vândut</td></tr>';
+            
+            if (user.role === 'admin' && $('userSalesTable')) {
+                $('userSalesTable').innerHTML = (d.sales_by_user || []).map(u => `
+                    <tr>
+                        <td><strong>${u.user_name}</strong></td>
+                        <td>${u.transactions}</td>
+                        <td class="text-success">${fmt(u.total)} RON</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3" class="text-center text-muted">Nicio vânzare</td></tr>';
+            }
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
+// ============================================
+// USERS MANAGEMENT
+// ============================================
+async function loadUsers() {
+    if (user.role !== 'admin') return;
+    try {
+        const res = await api('users');
+        if (res.success && $('usersTable')) {
+            $('usersTable').innerHTML = (res.data || []).map(u => `
+                <tr>
+                    <td><strong>${u.name}</strong></td>
+                    <td><code style="background:var(--bg-tertiary);padding:4px 8px;border-radius:4px;">${u.password || '••••'}</code></td>
+                    <td><span class="badge ${u.role === 'admin' ? 'badge-warning' : 'badge-info'}">${u.role === 'admin' ? 'Admin' : 'Operator'}</span></td>
+                    <td><span class="badge ${u.active !== false ? 'badge-success' : 'badge-muted'}">${u.active !== false ? 'Activ' : 'Inactiv'}</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openUser(${u.id})">✏️</button>
+                        ${u.id !== user.id ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center text-muted">Niciun utilizator</td></tr>';
+        }
+    } catch (e) { console.error(e); }
+}
+
+function openUserModal() { openUser(null); }
+
+async function openUser(id) {
+    let u = null;
+    if (id) {
+        try {
+            const res = await api(`users?id=${id}`);
+            if (res.success) u = res.data;
+        } catch (e) { console.error(e); }
+    }
+    
+    $('userModalTitle').textContent = u ? '✏️ Editare Utilizator' : '➕ Utilizator Nou';
+    $('visibleUserId').value = u?.id || '';
+    $('userNameInput').value = u?.name || '';
+    $('userPassInput').value = u?.password || '';
+    $('userRoleInput').value = u?.role || 'operator';
+    $('userActiveInput').value = u?.active !== false ? 'true' : 'false';
+    $('userActiveGroup').style.display = u ? 'block' : 'none';
+    openModal('userModal');
+}
+
+function deleteUser(id) {
+    confirmAction('Sigur ștergeți acest utilizator?', async () => {
+        loading(true);
+        try {
+            const res = await api('users?action=delete', { method: 'POST', body: JSON.stringify({ id }) });
+            if (res.success) {
+                toast('Utilizator șters!');
+                await loadUsers();
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+async function loadSettings() {
+    try {
+        const res = await api('settings');
+        if (res.success) {
+            const s = res.data || {};
+            if ($('settingCompanyName')) $('settingCompanyName').value = s.company_name || '';
+            if ($('settingCompanyCui')) $('settingCompanyCui').value = s.company_cui || '';
+            if ($('settingCompanyAddress')) $('settingCompanyAddress').value = s.company_address || '';
+            if ($('settingFiscoEnabled')) $('settingFiscoEnabled').checked = s.fisco_enabled === 'true';
+            if ($('settingFiscoUrl')) $('settingFiscoUrl').value = s.fisco_url || 'http://localhost:4444';
+            if ($('settingFiscalPort')) $('settingFiscalPort').value = s.fiscal_port || 'COM1';
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function saveAllSettings() {
+    loading(true);
+    try {
+        const res = await api('settings?action=save', {
+            method: 'POST',
+            body: JSON.stringify({
+                company_name: $('settingCompanyName')?.value || '',
+                company_cui: $('settingCompanyCui')?.value || '',
+                company_address: $('settingCompanyAddress')?.value || '',
+                fisco_enabled: $('settingFiscoEnabled')?.checked ? 'true' : 'false',
+                fisco_url: $('settingFiscoUrl')?.value || '',
+                fiscal_port: $('settingFiscalPort')?.value || 'COM1'
+            })
+        });
+        if (res.success) {
+            toast('Setări salvate!');
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
+function testFiscoConnection() {
+    toast('Funcție în dezvoltare', 'info');
+}
+
+function openCashDrawer() {
+    toast('Funcție în dezvoltare', 'info');
+}
+
+function printReport() {
+    window.print();
+}
+
+// ============================================
+// CONFIRM DIALOG
+// ============================================
+function confirmAction(msg, cb) {
+    $('confirmMsg').textContent = msg;
+    confirmCb = cb;
+    openModal('confirmModal');
+}
+
+function execConfirm() {
+    closeModal('confirmModal');
+    if (confirmCb) confirmCb();
+    confirmCb = null;
+}
+
+	
 function renderProducts() {
     let list = products;
     if (selectedCat) list = products.filter(p => p.category_id == selectedCat);
