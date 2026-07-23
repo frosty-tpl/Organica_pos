@@ -1453,12 +1453,8 @@ let appSettings = {};
 // HELPERS
 // ================================================
 const $ = id => document.getElementById(id);
-const $$ = sel => document.querySelectorAll(sel);
-const show = el => el?.classList.remove('hidden');
-const hide = el => el?.classList.add('hidden');
-const fmt = n => parseFloat(n || 0).toFixed(2);
 
-// Mapare coduri iconițe -> emoji
+	// Mapare coduri iconițe -> emoji
 const ICON_MAP = {
     ':beer:': '🍺',
     ':wine:': '🍷',
@@ -1495,6 +1491,13 @@ function getIcon(iconCode) {
     // Fallback
     return '📦';
 }
+	
+const $$ = sel => document.querySelectorAll(sel);
+const show = el => el?.classList.remove('hidden');
+const hide = el => el?.classList.add('hidden');
+const fmt = n => parseFloat(n || 0).toFixed(2);
+
+
 
 	
 function loading(on) {
@@ -1684,7 +1687,8 @@ function updateTime() {
 // ================================================
 // CATEGORIES
 // ================================================
-async function loadCategories() {
+
+	async function loadCategories() {
     try {
         const res = await api('categories');
         if (res.success) {
