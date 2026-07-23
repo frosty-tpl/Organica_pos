@@ -924,44 +924,64 @@
                 </div>
             </div>
 
-            <!-- Reports Tab -->
-            <div class="tab-content" id="tab-reports">
-                <div class="card mb-4">
-                    <div class="card-header"><h3>📊 Rapoarte Vânzări</h3></div>
-                    <div class="card-body">
-                        <div class="flex gap-4 flex-wrap items-center mb-4">
-                            <div class="form-group mb-0">
-                                <label>De la</label>
-                                <input type="date" class="form-control" id="repFrom">
-                            </div>
-                            <div class="form-group mb-0">
-                                <label>Până la</label>
-                                <input type="date" class="form-control" id="repTo">
-                            </div>
-                            <button class="btn btn-primary" onclick="genSalesReport()" style="margin-top:22px;">📊 Generează</button>
-                        </div>
-                    </div>
+           <!-- Reports Tab -->
+<div class="tab-content" id="tab-reports">
+    <div class="card mb-4">
+        <div class="card-header"><h3>📊 Rapoarte Vânzări</h3></div>
+        <div class="card-body">
+            <div class="flex gap-4 flex-wrap items-center mb-4">
+                <div class="form-group mb-0">
+                    <label>De la</label>
+                    <input type="date" class="form-control" id="repFrom">
                 </div>
-
-                <div class="stats-grid" id="repStats">
-                    <div class="stat-card primary"><div class="stat-label">Total Vânzări</div><div class="stat-value" id="repTotal">0</div></div>
-                    <div class="stat-card success"><div class="stat-label">Numerar</div><div class="stat-value" id="repCash">0</div></div>
-                    <div class="stat-card warning"><div class="stat-label">Card</div><div class="stat-value" id="repCard">0</div></div>
-                    <div class="stat-card"><div class="stat-label">Tranzacții</div><div class="stat-value" id="repTx">0</div></div>
+                <div class="form-group mb-0">
+                    <label>Până la</label>
+                    <input type="date" class="form-control" id="repTo">
                 </div>
-
-                <div class="card">
-                    <div class="card-header"><h3>🏆 Top Produse</h3></div>
-                    <div class="card-body">
-                        <div class="table-wrap">
-                            <table>
-                                <thead><tr><th>Produs</th><th>Categorie</th><th>Cantitate</th><th>Încasări</th></tr></thead>
-                                <tbody id="topTable"></tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="form-group mb-0 admin-only">
+                    <label>Utilizator</label>
+                    <select class="form-control" id="repUserFilter">
+                        <option value="all">👥 Toți utilizatorii</option>
+                    </select>
                 </div>
+                <button class="btn btn-primary" onclick="genSalesReport()" style="margin-top:22px;">📊 Generează</button>
             </div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card primary"><div class="stat-label">Total Vânzări</div><div class="stat-value" id="repTotal">0</div></div>
+        <div class="stat-card success"><div class="stat-label">Numerar</div><div class="stat-value" id="repCash">0</div></div>
+        <div class="stat-card warning"><div class="stat-label">Card</div><div class="stat-value" id="repCard">0</div></div>
+        <div class="stat-card"><div class="stat-label">Tranzacții</div><div class="stat-value" id="repTx">0</div></div>
+    </div>
+
+    <!-- Sales by User - Admin Only -->
+    <div class="card mb-4 admin-only">
+        <div class="card-header"><h3>👥 Vânzări pe Utilizator</h3></div>
+        <div class="card-body">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Utilizator</th><th>Tranzacții</th><th>Total Vânzări</th></tr></thead>
+                    <tbody id="userSalesTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>🏆 Top Produse</h3></div>
+        <div class="card-body">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Produs</th><th>Cantitate</th><th>Încasări</th></tr></thead>
+                    <tbody id="topTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 
             <!-- Settings Tab -->
             <!-- Settings Tab -->
@@ -1537,6 +1557,8 @@ function initTabs() {
                 case 'inventory': loadInventory(); break;
                 case 'products': loadProdTable(); break;
                 case 'settings': loadUsers(); loadSettings(); break;
+				case 'reports': loadUserFilter(); break;
+
             }
         };
     });
@@ -1737,7 +1759,6 @@ async function confirmPay() {
     
     const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
     const cashIn = payMethod === 'cash' ? (parseFloat($('cashIn').value) || total) : 0;
-    const cardIn = payMethod === 'card' ? total : 0;
     
     closeModal('payModal');
     loading(true);
@@ -1746,43 +1767,30 @@ async function confirmPay() {
         const res = await api('sales?action=create', {
             method: 'POST',
             body: JSON.stringify({
-                items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
+                items: cart.map(i => ({ product_id: i.id, name: i.name, quantity: i.qty, price: i.price })),
                 payment_method: payMethod,
                 cash_received: cashIn,
-                card_received: cardIn
+                total: total,
+                user_id: user.id,
+                user_name: user.name
             })
         });
         
         if (res.success) {
-            const sale = res.data.sale;
             const change = cashIn - total;
             
-            // Fiscal printing
-            let fiscalStatus = '';
-            if (appSettings.fisco_enabled === 'true') {
-                const fiscalResult = await printFiscalReceipt(sale, cart);
-                if (fiscalResult.success) {
-                    fiscalStatus = '🧾 Bon fiscal emis';
-                } else {
-                    fiscalStatus = `⚠️ Eroare bon fiscal: ${fiscalResult.error}`;
-                }
-            } else {
-                fiscalStatus = '📝 Imprimare fiscală dezactivată';
-            }
-            
-            // Receipt
-            $('receiptStatus').innerHTML = `✅ Vânzare înregistrată!<br><small>${fiscalStatus}</small>`;
+            // Show receipt
             $('receiptContent').innerHTML = `
                 <div class="receipt-header">
-                    <div class="receipt-title">BON VÂNZARE</div>
+                    <div class="receipt-title">BarPOS</div>
                     <div>${new Date().toLocaleString('ro-RO')}</div>
-                    <div>#${sale.sale_number}</div>
+                    <div>Operator: ${user.name}</div>
                 </div>
                 ${cart.map(i => `<div class="receipt-row"><span>${i.name} × ${i.qty}</span><span>${fmt(i.price * i.qty)}</span></div>`).join('')}
                 <div class="receipt-divider"></div>
                 <div class="receipt-row receipt-total"><span>TOTAL:</span><span>${fmt(total)} RON</span></div>
-                <div class="receipt-row"><span>${payMethod === 'cash' ? 'Numerar' : 'Card'}:</span><span>${fmt(payMethod === 'cash' ? cashIn : total)} RON</span></div>
-                ${change > 0 ? `<div class="receipt-row"><span>Rest:</span><span>${fmt(change)} RON</span></div>` : ''}
+                <div class="receipt-row"><span>${payMethod === 'cash' ? 'Numerar' : 'Card'}:</span><span>${fmt(payMethod === 'cash' ? cashIn : total)}</span></div>
+                ${change > 0 ? `<div class="receipt-row"><span>Rest:</span><span>${fmt(change)}</span></div>` : ''}
             `;
             openModal('receiptModal');
             
@@ -1799,99 +1807,6 @@ async function confirmPay() {
     loading(false);
 }
 
-// ================================================
-// CASH
-// ================================================
-async function loadCashSummary() {
-    try {
-        const res = await api('cash?action=today-summary');
-        if (res.success) {
-            const d = res.data;
-            $('cashOpen').textContent = fmt(d.opening);
-            $('cashSales').textContent = fmt(d.sales);
-            $('cashDeposits').textContent = fmt(d.deposits);
-            $('cashWithdrawals').textContent = fmt(d.withdrawals);
-            $('cashCurrent').textContent = fmt(d.current);
-            $('headerCash').textContent = fmt(d.current);
-        }
-    } catch (e) { console.error(e); }
-}
-
-async function loadCashTx() {
-    try {
-        const res = await api('cash?action=transactions');
-        if (res.success) {
-            const types = { day_start: '🌅 Deschidere', sale: '🛒 Vânzare', deposit: '💵 Depunere', withdraw: '💸 Retragere', report_x: '📋 Raport X', report_z: '📊 Raport Z', correction: '⚙️ Corecție' };
-            
-            if (!res.data.length) {
-                $('cashTable').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nicio mișcare astăzi</td></tr>';
-                return;
-            }
-            
-            $('cashTable').innerHTML = res.data.map(tx => {
-                const pos = ['day_start', 'sale', 'deposit'].includes(tx.type);
-                return `
-                    <tr>
-                        <td>${new Date(tx.created_at).toLocaleTimeString('ro-RO')}</td>
-                        <td>${types[tx.type] || tx.type}</td>
-                        <td>${tx.description || '-'}</td>
-                        <td class="${pos ? 'text-success' : 'text-danger'} font-bold">${pos ? '+' : '-'}${fmt(Math.abs(tx.amount))}</td>
-                        <td>${fmt(tx.balance_after)}</td>
-                        <td>${tx.user_name}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-    } catch (e) { console.error(e); }
-}
-
-function openCashOp(type) {
-    const isDeposit = type === 'deposit';
-    $('cashOpTitle').textContent = isDeposit ? '💵 Depunere Numerar' : '💸 Retragere Numerar';
-    $('cashOpType').value = type;
-    $('cashOpAmount').value = '';
-    $('cashOpDesc').value = '';
-    $('cashOpBtn').className = `btn ${isDeposit ? 'btn-success' : 'btn-danger'}`;
-    $('cashOpBtn').textContent = isDeposit ? '💵 Depune' : '💸 Retrage';
-    
-    if (!isDeposit) {
-        $('cashOpWarn').textContent = `Sold disponibil: ${$('cashCurrent').textContent} RON`;
-        show($('cashOpWarn'));
-    } else {
-        hide($('cashOpWarn'));
-    }
-    
-    openModal('cashOpModal');
-}
-
-$('cashOpForm').onsubmit = async e => {
-    e.preventDefault();
-    const type = $('cashOpType').value;
-    const amount = parseFloat($('cashOpAmount').value);
-    const desc = $('cashOpDesc').value;
-    
-    if (amount <= 0) { toast('Suma trebuie pozitivă!', 'error'); return; }
-    
-    closeModal('cashOpModal');
-    loading(true);
-    
-    try {
-        const res = await api(`cash?action=${type}`, {
-            method: 'POST',
-            body: JSON.stringify({ amount, description: desc })
-        });
-        
-        if (res.success) {
-            await loadCashSummary();
-            await loadCashTx();
-            toast(`${type === 'deposit' ? 'Depunere' : 'Retragere'} efectuată!`);
-        }
-    } catch (e) {
-        toast(e.message, 'error');
-    }
-    
-    loading(false);
-};
 
 async function genXReport() {
     loading(true);
@@ -2184,45 +2099,54 @@ function delProduct(id) {
 // REPORTS
 // ================================================
 async function genSalesReport() {
-    const dateFrom = $('repFrom').value;
-    const dateTo = $('repTo').value;
-    
-    if (!dateFrom || !dateTo) { toast('Selectați perioada!', 'warning'); return; }
-    
     loading(true);
-    
     try {
-        const [salesRes, topRes] = await Promise.all([
-            api(`reports?action=sales&date_from=${dateFrom}&date_to=${dateTo}`),
-            api(`reports?action=top-products&date_from=${dateFrom}&date_to=${dateTo}`)
-        ]);
+        // Build query params
+        let url = `reports?action=sales&from=${$('repFrom').value}&to=${$('repTo').value}`;
         
-        if (salesRes.success) {
-            const s = salesRes.data.summary;
-            $('repTotal').textContent = fmt(s.total_sales);
-            $('repCash').textContent = fmt(s.cash_sales);
-            $('repCard').textContent = fmt(s.card_sales);
-            $('repTx').textContent = s.total_transactions;
+        // If admin, check filter; if operator, always filter by own user
+        if (user.role === 'admin') {
+            const userFilter = $('repUserFilter')?.value || 'all';
+            if (userFilter !== 'all') {
+                url += `&user_id=${userFilter}`;
+            }
+        } else {
+            // Operators can only see their own sales
+            url += `&user_id=${user.id}`;
         }
         
-        if (topRes.success) {
-            if (!topRes.data.length) {
-                $('topTable').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nicio vânzare în această perioadă</td></tr>';
-            } else {
-                $('topTable').innerHTML = topRes.data.map(p => `
+        const res = await api(url);
+        if (res.success) {
+            const d = res.data;
+            $('repTotal').textContent = fmt(d.total);
+            $('repCash').textContent = fmt(d.cash);
+            $('repCard').textContent = fmt(d.card);
+            $('repTx').textContent = d.transactions;
+            
+            // Top products
+            $('topTable').innerHTML = (d.top_products || []).map(p => `
+                <tr>
+                    <td>${p.name}</td>
+                    <td>${p.quantity}</td>
+                    <td>${fmt(p.revenue)} RON</td>
+                </tr>
+            `).join('') || '<tr><td colspan="3" class="text-center text-muted">Niciun produs vândut</td></tr>';
+            
+            // Sales by user (admin only)
+            if (user.role === 'admin' && $('userSalesTable')) {
+                $('userSalesTable').innerHTML = (d.sales_by_user || []).map(u => `
                     <tr>
-                        <td>${p.category_icon || '📦'} ${p.name}</td>
-                        <td>${p.category}</td>
-                        <td><strong>${p.quantity}</strong></td>
-                        <td><strong>${fmt(p.revenue)}</strong> RON</td>
+                        <td><strong>${u.user_name}</strong></td>
+                        <td>${u.transactions}</td>
+                        <td class="text-success">${fmt(u.total)} RON</td>
                     </tr>
-                `).join('');
+                `).join('') || '<tr><td colspan="3" class="text-center text-muted">Nicio vânzare</td></tr>';
             }
         }
     } catch (e) { toast(e.message, 'error'); }
-    
     loading(false);
 }
+
 
 // ============================================
 // USERS MANAGEMENT
@@ -2336,6 +2260,20 @@ async function saveAllSettings() {
     } catch (e) { toast(e.message, 'error'); }
     loading(false);
 }
+
+async function loadUserFilter() {
+    if (user.role !== 'admin') return;
+    
+    try {
+        const res = await api('users');
+        if (res.success && $('repUserFilter')) {
+            const options = '<option value="all">👥 Toți utilizatorii</option>' + 
+                (res.data || []).map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+            $('repUserFilter').innerHTML = options;
+        }
+    } catch (e) { console.error(e); }
+}
+
 
 
 // ================================================
