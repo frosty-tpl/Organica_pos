@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { supabase } from './lib/supabase.js';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,98 +9,100 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    try {
-        const action = req.query.action;
-        
-        // Get sales from KV or use empty array
-        let sales = [];
-        try {
-            sales = await kv.get('pos_sales') || [];
-        } catch (e) {
-            console.error('KV read error:', e);
-            sales = [];
-        }
+    const action = req.query.action;
 
+    try {
         // GET - List sales
         if (req.method === 'GET') {
-            const userId = req.query.user_id;
-            const fromDate = req.query.from;
-            const toDate = req.query.to;
+            let query = supabase
+                .from('sales')
+                .select('*, sale_items(*)')
+                .order('created_at', { ascending: false });
             
-            let filteredSales = [...sales];
-            
-            // Filter by user if specified (for non-admin)
-            if (userId) {
-                filteredSales = filteredSales.filter(s => s.user_id === parseInt(userId));
+            // Filter by user
+            if (req.query.user_id && req.query.user_id !== 'all') {
+                query = query.eq('user_id', parseInt(req.query.user_id));
             }
             
-            // Filter by date range
-            if (fromDate) {
-                const from = new Date(fromDate);
-                from.setHours(0, 0, 0, 0);
-                filteredSales = filteredSales.filter(s => new Date(s.created_at) >= from);
+            // Filter by date
+            if (req.query.from) {
+                query = query.gte('created_at', req.query.from + 'T00:00:00');
+            }
+            if (req.query.to) {
+                query = query.lte('created_at', req.query.to + 'T23:59:59');
             }
             
-            if (toDate) {
-                const to = new Date(toDate);
-                to.setHours(23, 59, 59, 999);
-                filteredSales = filteredSales.filter(s => new Date(s.created_at) <= to);
-            }
+            const { data, error } = await query;
+            if (error) throw error;
             
-            // Sort by date descending
-            filteredSales.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
-            return res.json({ success: true, data: filteredSales });
+            return res.json({ success: true, data });
         }
 
         // POST - Create sale
         if (req.method === 'POST' && action === 'create') {
             let body = req.body;
-            if (typeof body === 'string') {
-                body = JSON.parse(body);
+            if (typeof body === 'string') body = JSON.parse(body);
+            
+            // Create sale
+            const { data: sale, error: saleError } = await supabase
+                .from('sales')
+                .insert({
+                    total: body.total,
+                    payment_method: body.payment_method,
+                    cash_received: body.cash_received || 0,
+                    user_id: body.user_id,
+                    user_name: body.user_name
+                })
+                .select()
+                .single();
+            
+            if (saleError) throw saleError;
+            
+            // Create sale items
+            const saleItems = body.items.map(item => ({
+                sale_id: sale.id,
+                product_id: item.product_id,
+                product_name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            }));
+            
+            const { error: itemsError } = await supabase
+                .from('sale_items')
+                .insert(saleItems);
+            
+            if (itemsError) throw itemsError;
+            
+            // Update stock
+            for (const item of body.items) {
+                await supabase.rpc('decrement_stock', {
+                    prod_id: item.product_id,
+                    qty: item.quantity
+                }).catch(() => {
+                    // Fallback if RPC doesn't exist
+                    supabase
+                        .from('products')
+                        .select('stock')
+                        .eq('id', item.product_id)
+                        .single()
+                        .then(({ data }) => {
+                            if (data) {
+                                supabase
+                                    .from('products')
+                                    .update({ stock: Math.max(0, data.stock - item.quantity) })
+                                    .eq('id', item.product_id);
+                            }
+                        });
+                });
             }
             
-            const newSale = {
-                id: Date.now(),
-                items: body.items,
-                total: body.total,
-                payment_method: body.payment_method,
-                cash_received: body.cash_received || 0,
-                user_id: body.user_id,
-                user_name: body.user_name,
-                created_at: new Date().toISOString()
-            };
-            
-            sales.push(newSale);
-            
-            // Save to KV
-            try {
-                await kv.set('pos_sales', sales);
-            } catch (e) {
-                console.error('KV write error:', e);
-            }
-            
-            // Update product stock
-            try {
-                let products = await kv.get('pos_products') || [];
-                for (const item of body.items) {
-                    const prodIndex = products.findIndex(p => p.id === item.product_id);
-                    if (prodIndex !== -1) {
-                        products[prodIndex].stock -= item.quantity;
-                    }
-                }
-                await kv.set('pos_products', products);
-            } catch (e) {
-                console.error('Stock update error:', e);
-            }
-            
-            return res.json({ success: true, data: newSale });
+            return res.json({ success: true, data: sale });
         }
 
         return res.status(400).json({ success: false, error: 'Invalid action' });
 
     } catch (error) {
-        console.error('Sales API Error:', error);
+        console.error('Sales Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 }
