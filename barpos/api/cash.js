@@ -1,156 +1,116 @@
-const { supabase, verifyToken, today } = require('../lib/db.js');
+import { supabase } from './lib/supabase.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
+    const action = req.query.action;
+
     try {
-        const user = await verifyToken({ headers: { get: (h) => req.headers[h.toLowerCase()] } });
-        if (!user) {
-            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        // Get today's date range
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString();
+
+        // SUMMARY
+        if (action === 'summary') {
+            // Get today's cash sales
+            const { data: sales } = await supabase
+                .from('sales')
+                .select('total, payment_method')
+                .gte('created_at', todayStr)
+                .eq('payment_method', 'cash');
+            
+            const salesTotal = (sales || []).reduce((sum, s) => sum + parseFloat(s.total), 0);
+            
+            // Get today's cash operations
+            const { data: ops } = await supabase
+                .from('cash_operations')
+                .select('*')
+                .gte('created_at', todayStr);
+            
+            const deposits = (ops || []).filter(o => o.type === 'deposit').reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            const withdrawals = (ops || []).filter(o => o.type === 'withdraw').reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            
+            // Get opening balance from settings
+            const { data: setting } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'cash_opening')
+                .single();
+            
+            const opening = parseFloat(setting?.value || 0);
+            const current = opening + salesTotal + deposits - withdrawals;
+            
+            return res.json({
+                success: true,
+                data: {
+                    opening,
+                    sales: salesTotal,
+                    deposits,
+                    withdrawals,
+                    current
+                }
+            });
         }
 
-        const action = req.query.action;
-
-        switch (action) {
-            case 'today-summary':
-                return await getTodaySummary(req, res);
-            case 'transactions':
-                return await getTransactions(req, res);
-            case 'deposit':
-                return await deposit(req, res, user);
-            case 'withdraw':
-                return await withdraw(req, res, user);
-            default:
-                return res.status(400).json({ success: false, error: 'Invalid action' });
+        // TRANSACTIONS
+        if (action === 'transactions') {
+            const { data, error } = await supabase
+                .from('cash_operations')
+                .select('*')
+                .gte('created_at', todayStr)
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            return res.json({ success: true, data });
         }
-    } catch (err) {
-        console.error('Cash error:', err);
-        return res.status(500).json({ success: false, error: err.message });
-    }
-};
 
-async function getTodaySummary(req, res) {
-    const todayDate = today();
-    const startOfDay = `${todayDate}T00:00:00`;
-    const endOfDay = `${todayDate}T23:59:59`;
-
-    // Get today's transactions
-    const { data: transactions } = await supabase
-        .from('cash_transactions')
-        .select('*')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay);
-
-    // Get current balance
-    const { data: lastTx } = await supabase
-        .from('cash_transactions')
-        .select('balance_after')
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
-
-    const opening = transactions?.find(t => t.type === 'day_start')?.balance_after || 0;
-    const sales = transactions?.filter(t => t.type === 'sale').reduce((s, t) => s + parseFloat(t.amount), 0) || 0;
-    const deposits = transactions?.filter(t => t.type === 'deposit').reduce((s, t) => s + parseFloat(t.amount), 0) || 0;
-    const withdrawals = transactions?.filter(t => t.type === 'withdraw').reduce((s, t) => s + parseFloat(t.amount), 0) || 0;
-
-    return res.status(200).json({
-        success: true,
-        data: {
-            date: todayDate,
-            opening: parseFloat(opening),
-            sales,
-            deposits,
-            withdrawals,
-            current: parseFloat(lastTx?.balance_after) || 0
+        // OPERATION (deposit/withdraw)
+        if (action === 'operation' && req.method === 'POST') {
+            let body = req.body;
+            if (typeof body === 'string') body = JSON.parse(body);
+            
+            // Get current balance
+            const { data: summary } = await supabase
+                .from('cash_operations')
+                .select('balance')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            
+            const currentBalance = parseFloat(summary?.balance || 0);
+            const amount = parseFloat(body.amount);
+            const newBalance = body.type === 'deposit' 
+                ? currentBalance + amount 
+                : currentBalance - amount;
+            
+            const { data, error } = await supabase
+                .from('cash_operations')
+                .insert({
+                    type: body.type,
+                    amount: body.type === 'withdraw' ? -amount : amount,
+                    description: body.description,
+                    balance: newBalance,
+                    user_id: body.user_id,
+                    user_name: body.user_name
+                })
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return res.json({ success: true, data });
         }
-    });
-}
 
-async function getTransactions(req, res) {
-    const todayDate = today();
-    const startOfDay = `${todayDate}T00:00:00`;
-    const endOfDay = `${todayDate}T23:59:59`;
+        return res.status(400).json({ success: false, error: 'Invalid action' });
 
-    const { data } = await supabase
-        .from('cash_transactions')
-        .select('*, users(name)')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay)
-        .order('created_at', { ascending: false });
-
-    const transactions = data?.map(t => ({
-        ...t,
-        user_name: t.users?.name,
-        users: undefined
-    })) || [];
-
-    return res.status(200).json({ success: true, data: transactions });
-}
-
-async function deposit(req, res, user) {
-    const { amount, description } = req.body;
-
-    if (!amount || amount <= 0) {
-        return res.status(400).json({ success: false, error: 'Amount must be positive' });
+    } catch (error) {
+        console.error('Cash Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
     }
-
-    const { data: lastTx } = await supabase
-        .from('cash_transactions')
-        .select('balance_after')
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
-
-    const currentBalance = parseFloat(lastTx?.balance_after) || 0;
-    const newBalance = currentBalance + parseFloat(amount);
-
-    await supabase.from('cash_transactions').insert({
-        user_id: user.user_id,
-        type: 'deposit',
-        amount: parseFloat(amount),
-        balance_after: newBalance,
-        description: description || 'Depunere numerar'
-    });
-
-    return res.status(200).json({ success: true, data: { balance: newBalance }, message: 'Deposit successful' });
-}
-
-async function withdraw(req, res, user) {
-    const { amount, description } = req.body;
-
-    if (!amount || amount <= 0) {
-        return res.status(400).json({ success: false, error: 'Amount must be positive' });
-    }
-
-    const { data: lastTx } = await supabase
-        .from('cash_transactions')
-        .select('balance_after')
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
-
-    const currentBalance = parseFloat(lastTx?.balance_after) || 0;
-
-    if (amount > currentBalance) {
-        return res.status(400).json({ success: false, error: 'Fonduri insuficiente' });
-    }
-
-    const newBalance = currentBalance - parseFloat(amount);
-
-    await supabase.from('cash_transactions').insert({
-        user_id: user.user_id,
-        type: 'withdraw',
-        amount: parseFloat(amount),
-        balance_after: newBalance,
-        description: description || 'Retragere numerar'
-    });
-
-    return res.status(200).json({ success: true, data: { balance: newBalance }, message: 'Withdrawal successful' });
 }
