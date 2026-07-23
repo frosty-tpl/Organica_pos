@@ -1375,6 +1375,47 @@
             </div>
         </div>
     </div>
+	<!-- User Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="userModalTitle">👤 Utilizator</h2>
+            <button class="modal-close" onclick="closeModal('userModal')">✕</button>
+        </div>
+        <form id="userForm">
+            <div class="modal-body">
+                <input type="hidden" id="visibleUserId">
+                <div class="form-group">
+                    <label>Nume Utilizator</label>
+                    <input type="text" class="form-control" id="userNameInput" required>
+                </div>
+                <div class="form-group">
+                    <label>Parolă</label>
+                    <input type="text" class="form-control" id="userPassInput" required>
+                    <small class="text-muted">Parola este vizibilă pentru admin</small>
+                </div>
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select class="form-control" id="userRoleInput">
+                        <option value="operator">Operator</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                </div>
+                <div class="form-group" id="userActiveGroup" style="display:none;">
+                    <label>Status</label>
+                    <select class="form-control" id="userActiveInput">
+                        <option value="true">Activ</option>
+                        <option value="false">Inactiv</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Anulează</button>
+                <button type="submit" class="btn btn-primary">💾 Salvează</button>
+            </div>
+        </form>
+    </div>
+</div>
 
     <!-- Receipt Modal -->
     <div class="modal-overlay" id="receiptModal">
@@ -2324,122 +2365,119 @@ async function genSalesReport() {
     loading(false);
 }
 
-// ================================================
+// ============================================
 // USERS MANAGEMENT
-// ================================================
+// ============================================
 async function loadUsers() {
+    if (user.role !== 'admin') return;
     try {
-        const res = await api('auth?action=users');
+        const res = await api('users');
         if (res.success) {
-            const tbody = $('usersTable');
-            if (!res.data || !res.data.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Niciun utilizator</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = res.data.map(u => `
+            $('usersTable').innerHTML = (res.data || []).map(u => `
                 <tr>
                     <td><strong>${u.name}</strong></td>
+                    <td><code style="background:var(--bg-tertiary);padding:4px 8px;border-radius:4px;">${u.password || '••••'}</code></td>
+                    <td><span class="badge ${u.role === 'admin' ? 'badge-warning' : 'badge-info'}">${u.role === 'admin' ? 'Admin' : 'Operator'}</span></td>
+                    <td><span class="badge ${u.active !== false ? 'badge-success' : 'badge-muted'}">${u.active !== false ? 'Activ' : 'Inactiv'}</span></td>
                     <td>
-                        <code style="background:var(--bg-tertiary);padding:4px 8px;border-radius:4px;">
-                            ${u.password}
-                        </code>
-                    </td>
-                    <td>
-                        <span class="badge ${u.role === 'admin' ? 'badge-warning' : 'badge-info'}">
-                            ${u.role === 'admin' ? '👑 Admin' : '👤 Operator'}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge ${u.active ? 'badge-success' : 'badge-danger'}">
-                            ${u.active ? '✓ Activ' : '✗ Inactiv'}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-warning btn-sm" onclick="editUser(${u.id}, '${u.name}', '${u.password}', '${u.role}', ${u.active})">✏️</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${u.name}')">🗑️</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openUser(${u.id})">✏️</button>
+                        ${u.id !== user.id ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
                     </td>
                 </tr>
-            `).join('');
+            `).join('') || '<tr><td colspan="5" class="text-center text-muted">Niciun utilizator</td></tr>';
         }
-    } catch (e) {
-        console.error('Error loading users:', e);
-    }
+    } catch (e) { console.error(e); }
 }
 
-function openUserModal(isEdit = false) {
-    $('userModalTitle').textContent = isEdit ? '✏️ Editare Utilizator' : '👤 Utilizator Nou';
-    if (!isEdit) {
-        $('visibleUserId').value = '';
-        $('userNameInput').value = '';
-        $('userPassInput').value = '';
-        $('userRoleInput').value = 'operator';
-        $('userActiveGroup').style.display = 'none';
+function openUserModal() { openUser(null); }
+
+async function openUser(id) {
+    let u = null;
+    if (id) {
+        try {
+            const res = await api(`users?id=${id}`);
+            if (res.success) u = res.data;
+        } catch (e) { console.error(e); }
     }
+    
+    $('userModalTitle').textContent = u ? '✏️ Editare Utilizator' : '➕ Utilizator Nou';
+    $('visibleUserId').value = u?.id || '';
+    $('userNameInput').value = u?.name || '';
+    $('userPassInput').value = u?.password || '';
+    $('userRoleInput').value = u?.role || 'operator';
+    $('userActiveInput').value = u?.active !== false ? 'true' : 'false';
+    $('userActiveGroup').style.display = u ? 'block' : 'none';
     openModal('userModal');
-}
-
-function editUser(id, name, password, role, active) {
-    $('visibleUserId').value = id;
-    $('userNameInput').value = name;
-    $('userPassInput').value = password;
-    $('userRoleInput').value = role;
-    $('userActiveInput').value = active.toString();
-    $('userActiveGroup').style.display = 'block';
-    openUserModal(true);
 }
 
 $('userForm').onsubmit = async e => {
     e.preventDefault();
-    
-    const id = $('visibleUserId').value;
-    const data = {
-        name: $('userNameInput').value,
-        password: $('userPassInput').value,
-        role: $('userRoleInput').value
-    };
-    
-    if (id) {
-        data.id = parseInt(id);
-        data.active = $('userActiveInput').value === 'true';
-    }
-    
-    closeModal('userModal');
     loading(true);
-    
     try {
-        const action = id ? 'user-update' : 'user-create';
-        const res = await api(`auth?action=${action}`, {
+        const id = $('visibleUserId').value;
+        const res = await api(`users?action=${id ? 'update' : 'create'}`, {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                id: id || undefined,
+                name: $('userNameInput').value,
+                password: $('userPassInput').value,
+                role: $('userRoleInput').value,
+                active: $('userActiveInput').value === 'true'
+            })
         });
-        
         if (res.success) {
+            closeModal('userModal');
             toast(id ? 'Utilizator actualizat!' : 'Utilizator creat!');
             await loadUsers();
         }
-    } catch (e) {
-        toast(e.message, 'error');
-    }
-    
+    } catch (e) { toast(e.message, 'error'); }
     loading(false);
 };
 
-function deleteUser(id, name) {
-    showConfirm('Șterge Utilizator', `Sigur vrei să ștergi utilizatorul "${name}"?`, async () => {
+function deleteUser(id) {
+    confirmAction('Sigur ștergeți acest utilizator?', async () => {
         loading(true);
         try {
-            const res = await api(`auth?action=user-delete&id=${id}`, { method: 'DELETE' });
+            const res = await api('users?action=delete', { method: 'POST', body: JSON.stringify({ id }) });
             if (res.success) {
                 toast('Utilizator șters!');
                 await loadUsers();
             }
-        } catch (e) {
-            toast(e.message, 'error');
-        }
+        } catch (e) { toast(e.message, 'error'); }
         loading(false);
     });
 }
+
+// Fiscal printer functions
+function testFiscoConnection() {
+    toast('Funcție în dezvoltare', 'info');
+}
+
+function openCashDrawer() {
+    toast('Funcție în dezvoltare', 'info');
+}
+
+async function saveAllSettings() {
+    loading(true);
+    try {
+        const res = await api('settings?action=save', {
+            method: 'POST',
+            body: JSON.stringify({
+                company_name: $('settingCompanyName').value,
+                company_cui: $('settingCompanyCui').value,
+                company_address: $('settingCompanyAddress').value,
+                fisco_enabled: $('settingFiscoEnabled').checked ? 'true' : 'false',
+                fisco_url: $('settingFiscoUrl').value,
+                fiscal_port: $('settingFiscalPort').value
+            })
+        });
+        if (res.success) {
+            toast('Setări salvate!');
+        }
+    } catch (e) { toast(e.message, 'error'); }
+    loading(false);
+}
+
 
 // ================================================
 // SETTINGS MANAGEMENT
