@@ -29,27 +29,40 @@ export default async function handler(req, res) {
             const { username, password } = body;
             
             // Find user
-            const { data: user, error } = await supabase
+            const { data: users, error } = await supabase
                 .from('users')
                 .select('*')
                 .eq('name', username)
-                .eq('password', password)
-                .eq('active', true)
-                .single();
+                .eq('active', true);
             
-            if (error || !user) {
+            if (error) {
+                console.error('Login error:', error);
+                return res.status(500).json({ success: false, error: 'Database error' });
+            }
+            
+            const user = users?.find(u => u.password === password);
+            
+            if (!user) {
                 return res.status(401).json({ success: false, error: 'Credențiale invalide' });
             }
             
             // Create session token
             const token = generateToken();
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
             
-            await supabase.from('sessions').insert({
+            // Delete old sessions for this user
+            await supabase.from('sessions').delete().eq('user_id', user.id);
+            
+            // Create new session
+            const { error: sessionError } = await supabase.from('sessions').insert({
                 token,
                 user_id: user.id,
                 expires_at: expiresAt.toISOString()
             });
+            
+            if (sessionError) {
+                console.error('Session create error:', sessionError);
+            }
             
             return res.json({
                 success: true,
@@ -69,24 +82,38 @@ export default async function handler(req, res) {
             
             const token = authHeader.split(' ')[1];
             
-            const { data: session, error } = await supabase
+            // Find session
+            const { data: sessions, error: sessionError } = await supabase
                 .from('sessions')
-                .select('*, users(*)')
+                .select('*')
                 .eq('token', token)
-                .gt('expires_at', new Date().toISOString())
-                .single();
+                .gt('expires_at', new Date().toISOString());
             
-            if (error || !session) {
+            if (sessionError || !sessions || sessions.length === 0) {
                 return res.status(401).json({ success: false, error: 'Invalid session' });
             }
+            
+            const session = sessions[0];
+            
+            // Get user
+            const { data: users, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user_id);
+            
+            if (userError || !users || users.length === 0) {
+                return res.status(401).json({ success: false, error: 'User not found' });
+            }
+            
+            const user = users[0];
             
             return res.json({
                 success: true,
                 data: {
                     user: { 
-                        id: session.users.id, 
-                        name: session.users.name, 
-                        role: session.users.role 
+                        id: user.id, 
+                        name: user.name, 
+                        role: user.role 
                     }
                 }
             });
