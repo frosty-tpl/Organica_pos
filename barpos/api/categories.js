@@ -34,6 +34,7 @@ export default async function handler(req, res) {
             const { data, error } = await supabase
                 .from('categories')
                 .select('*')
+                .eq('active', true)
                 .order('sort_order', { ascending: true });
             
             if (error) throw error;
@@ -52,7 +53,8 @@ export default async function handler(req, res) {
                     .insert({
                         name: body.name,
                         icon: body.icon || ':box:',
-                        sort_order: body.sort_order || 0
+                        sort_order: body.sort_order || 0,
+                        active: true
                     })
                     .select()
                     .single();
@@ -80,9 +82,10 @@ export default async function handler(req, res) {
 
             // DELETE
             if (action === 'delete') {
+                // Soft delete - marcăm ca inactiv
                 const { error } = await supabase
                     .from('categories')
-                    .delete()
+                    .update({ active: false })
                     .eq('id', parseInt(body.id));
                 
                 if (error) throw error;
