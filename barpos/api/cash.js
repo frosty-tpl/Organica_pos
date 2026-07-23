@@ -5,7 +5,6 @@ const supabase = createClient(
     process.env.SUPABASE_ANON_KEY
 );
 
-
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -29,10 +28,11 @@ export default async function handler(req, res) {
             const { data: sales } = await supabase
                 .from('sales')
                 .select('total, payment_method')
-                .gte('created_at', todayStr)
-                .eq('payment_method', 'cash');
+                .gte('created_at', todayStr);
             
-            const salesTotal = (sales || []).reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const cashSales = (sales || [])
+                .filter(s => s.payment_method === 'cash')
+                .reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
             
             // Get today's cash operations
             const { data: ops } = await supabase
@@ -40,24 +40,28 @@ export default async function handler(req, res) {
                 .select('*')
                 .gte('created_at', todayStr);
             
-            const deposits = (ops || []).filter(o => o.type === 'deposit').reduce((sum, o) => sum + parseFloat(o.amount), 0);
-            const withdrawals = (ops || []).filter(o => o.type === 'withdraw').reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            const deposits = (ops || [])
+                .filter(o => o.type === 'deposit')
+                .reduce((sum, o) => sum + Math.abs(parseFloat(o.amount || 0)), 0);
+            
+            const withdrawals = (ops || [])
+                .filter(o => o.type === 'withdraw')
+                .reduce((sum, o) => sum + Math.abs(parseFloat(o.amount || 0)), 0);
             
             // Get opening balance from settings
-            const { data: setting } = await supabase
+            const { data: settings } = await supabase
                 .from('settings')
                 .select('value')
-                .eq('key', 'cash_opening')
-                .single();
+                .eq('key', 'cash_opening');
             
-            const opening = parseFloat(setting?.value || 0);
-            const current = opening + salesTotal + deposits - withdrawals;
+            const opening = parseFloat(settings?.[0]?.value || 0);
+            const current = opening + cashSales + deposits - withdrawals;
             
             return res.json({
                 success: true,
                 data: {
                     opening,
-                    sales: salesTotal,
+                    sales: cashSales,
                     deposits,
                     withdrawals,
                     current
@@ -74,7 +78,7 @@ export default async function handler(req, res) {
                 .order('created_at', { ascending: false });
             
             if (error) throw error;
-            return res.json({ success: true, data });
+            return res.json({ success: true, data: data || [] });
         }
 
         // OPERATION (deposit/withdraw)
@@ -82,29 +86,17 @@ export default async function handler(req, res) {
             let body = req.body;
             if (typeof body === 'string') body = JSON.parse(body);
             
-            // Get current balance
-            const { data: summary } = await supabase
-                .from('cash_operations')
-                .select('balance')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
-            
-            const currentBalance = parseFloat(summary?.balance || 0);
             const amount = parseFloat(body.amount);
-            const newBalance = body.type === 'deposit' 
-                ? currentBalance + amount 
-                : currentBalance - amount;
             
             const { data, error } = await supabase
                 .from('cash_operations')
                 .insert({
                     type: body.type,
                     amount: body.type === 'withdraw' ? -amount : amount,
-                    description: body.description,
-                    balance: newBalance,
-                    user_id: body.user_id,
-                    user_name: body.user_name
+                    description: body.description || '',
+                    balance: 0,
+                    user_id: body.user_id || null,
+                    user_name: body.user_name || ''
                 })
                 .select()
                 .single();
