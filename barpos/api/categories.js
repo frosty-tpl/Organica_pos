@@ -5,7 +5,6 @@ const supabase = createClient(
     process.env.SUPABASE_ANON_KEY
 );
 
-
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -22,8 +21,12 @@ export default async function handler(req, res) {
                 .select('*')
                 .order('sort_order', { ascending: true });
             
-            if (error) throw error;
-            return res.json({ success: true, data });
+            if (error) {
+                console.error('Categories error:', error);
+                throw error;
+            }
+            
+            return res.json({ success: true, data: data || [] });
         }
 
         return res.status(405).json({ success: false, error: 'Method not allowed' });
