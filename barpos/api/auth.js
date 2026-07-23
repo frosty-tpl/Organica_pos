@@ -5,7 +5,6 @@ const supabase = createClient(
     process.env.SUPABASE_ANON_KEY
 );
 
-
 function generateToken() {
     return 'tok_' + Math.random().toString(36).substr(2) + Date.now().toString(36);
 }
@@ -44,7 +43,7 @@ export default async function handler(req, res) {
             
             // Create session token
             const token = generateToken();
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
             
             await supabase.from('sessions').insert({
                 token,
@@ -70,7 +69,6 @@ export default async function handler(req, res) {
             
             const token = authHeader.split(' ')[1];
             
-            // Find session
             const { data: session, error } = await supabase
                 .from('sessions')
                 .select('*, users(*)')
