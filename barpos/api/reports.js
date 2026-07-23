@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { supabase } from './lib/supabase.js';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,56 +9,39 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    try {
-        const action = req.query.action;
-        const fromDate = req.query.from;
-        const toDate = req.query.to;
-        const userId = req.query.user_id; // Filter by specific user
-        
-        // Get sales
-        let sales = [];
-        try {
-            sales = await kv.get('pos_sales') || [];
-        } catch (e) {
-            sales = [];
-        }
-        
-        // Filter by date
-        let filteredSales = [...sales];
-        
-        if (fromDate) {
-            const from = new Date(fromDate);
-            from.setHours(0, 0, 0, 0);
-            filteredSales = filteredSales.filter(s => new Date(s.created_at) >= from);
-        }
-        
-        if (toDate) {
-            const to = new Date(toDate);
-            to.setHours(23, 59, 59, 999);
-            filteredSales = filteredSales.filter(s => new Date(s.created_at) <= to);
-        }
-        
-        // Filter by user if specified
-        if (userId && userId !== 'all') {
-            filteredSales = filteredSales.filter(s => s.user_id === parseInt(userId));
-        }
+    const action = req.query.action;
+    const fromDate = req.query.from;
+    const toDate = req.query.to;
+    const userId = req.query.user_id;
 
-        // Sales report
+    try {
+        // SALES REPORT
         if (action === 'sales') {
-            const total = filteredSales.reduce((sum, s) => sum + (s.total || 0), 0);
-            const cash = filteredSales.filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + (s.total || 0), 0);
-            const card = filteredSales.filter(s => s.payment_method === 'card').reduce((sum, s) => sum + (s.total || 0), 0);
+            let query = supabase
+                .from('sales')
+                .select('*, sale_items(*)');
+            
+            if (fromDate) query = query.gte('created_at', fromDate + 'T00:00:00');
+            if (toDate) query = query.lte('created_at', toDate + 'T23:59:59');
+            if (userId && userId !== 'all') query = query.eq('user_id', parseInt(userId));
+            
+            const { data: sales, error } = await query;
+            if (error) throw error;
+            
+            const total = sales.reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const cash = sales.filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const card = sales.filter(s => s.payment_method === 'card').reduce((sum, s) => sum + parseFloat(s.total), 0);
             
             // Top products
             const productStats = {};
-            for (const sale of filteredSales) {
-                for (const item of (sale.items || [])) {
+            for (const sale of sales) {
+                for (const item of (sale.sale_items || [])) {
                     const key = item.product_id;
                     if (!productStats[key]) {
-                        productStats[key] = { name: item.name || `Product ${key}`, quantity: 0, revenue: 0 };
+                        productStats[key] = { name: item.product_name, quantity: 0, revenue: 0 };
                     }
                     productStats[key].quantity += item.quantity;
-                    productStats[key].revenue += item.quantity * item.price;
+                    productStats[key].revenue += item.quantity * parseFloat(item.price);
                 }
             }
             
@@ -66,19 +49,17 @@ export default async function handler(req, res) {
                 .sort((a, b) => b.revenue - a.revenue)
                 .slice(0, 10);
             
-            // Sales by user (for admin)
+            // Sales by user
             const userStats = {};
-            for (const sale of filteredSales) {
+            for (const sale of sales) {
                 const uId = sale.user_id || 0;
                 const uName = sale.user_name || 'Necunoscut';
                 if (!userStats[uId]) {
                     userStats[uId] = { user_id: uId, user_name: uName, total: 0, transactions: 0 };
                 }
-                userStats[uId].total += sale.total || 0;
+                userStats[uId].total += parseFloat(sale.total);
                 userStats[uId].transactions += 1;
             }
-            
-            const salesByUser = Object.values(userStats).sort((a, b) => b.total - a.total);
             
             return res.json({
                 success: true,
@@ -86,48 +67,40 @@ export default async function handler(req, res) {
                     total,
                     cash,
                     card,
-                    transactions: filteredSales.length,
+                    transactions: sales.length,
                     top_products: topProducts,
-                    sales_by_user: salesByUser,
-                    sales: filteredSales
+                    sales_by_user: Object.values(userStats).sort((a, b) => b.total - a.total)
                 }
             });
         }
 
-        // X Report (without closing)
+        // X REPORT
         if (action === 'x') {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString();
             
-            const todaySales = sales.filter(s => new Date(s.created_at) >= today);
+            const { data: sales } = await supabase
+                .from('sales')
+                .select('*')
+                .gte('created_at', todayStr);
             
-            // Filter by user if specified
-            let userSales = todaySales;
-            if (userId && userId !== 'all') {
-                userSales = todaySales.filter(s => s.user_id === parseInt(userId));
-            }
+            const { data: ops } = await supabase
+                .from('cash_operations')
+                .select('*')
+                .gte('created_at', todayStr);
             
-            const cashSales = userSales.filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + (s.total || 0), 0);
-            const cardSales = userSales.filter(s => s.payment_method === 'card').reduce((sum, s) => sum + (s.total || 0), 0);
+            const { data: setting } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'cash_opening')
+                .single();
             
-            // Get cash operations
-            let cashOps = [];
-            try {
-                cashOps = await kv.get('pos_cash_ops') || [];
-            } catch (e) {}
-            
-            const todayOps = cashOps.filter(op => new Date(op.created_at) >= today);
-            const deposits = todayOps.filter(op => op.type === 'deposit').reduce((sum, op) => sum + op.amount, 0);
-            const withdrawals = todayOps.filter(op => op.type === 'withdraw').reduce((sum, op) => sum + op.amount, 0);
-            
-            // Get opening balance
-            let cashStatus = {};
-            try {
-                cashStatus = await kv.get('pos_cash_status') || { opening: 0 };
-            } catch (e) {}
-            
-            const opening = cashStatus.opening || 0;
-            const closing = opening + cashSales + deposits - withdrawals;
+            const opening = parseFloat(setting?.value || 0);
+            const cashSales = (sales || []).filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const cardSales = (sales || []).filter(s => s.payment_method === 'card').reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const deposits = (ops || []).filter(o => o.type === 'deposit').reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            const withdrawals = (ops || []).filter(o => o.type === 'withdraw').reduce((sum, o) => sum + Math.abs(parseFloat(o.amount)), 0);
             
             return res.json({
                 success: true,
@@ -140,59 +113,56 @@ export default async function handler(req, res) {
                     total_sales: cashSales + cardSales,
                     deposits,
                     withdrawals,
-                    closing,
-                    transactions: userSales.length
+                    closing: opening + cashSales + deposits - withdrawals,
+                    transactions: (sales || []).length
                 }
             });
         }
 
-        // Z Report (with closing - admin only)
+        // Z REPORT
         if (action === 'z' && req.method === 'POST') {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString();
             
-            const todaySales = sales.filter(s => new Date(s.created_at) >= today);
-            const cashSales = todaySales.filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + (s.total || 0), 0);
-            const cardSales = todaySales.filter(s => s.payment_method === 'card').reduce((sum, s) => sum + (s.total || 0), 0);
+            const { data: sales } = await supabase
+                .from('sales')
+                .select('*')
+                .gte('created_at', todayStr);
             
-            // Get cash operations
-            let cashOps = [];
-            try {
-                cashOps = await kv.get('pos_cash_ops') || [];
-            } catch (e) {}
+            const { data: ops } = await supabase
+                .from('cash_operations')
+                .select('*')
+                .gte('created_at', todayStr);
             
-            const todayOps = cashOps.filter(op => new Date(op.created_at) >= today);
-            const deposits = todayOps.filter(op => op.type === 'deposit').reduce((sum, op) => sum + op.amount, 0);
-            const withdrawals = todayOps.filter(op => op.type === 'withdraw').reduce((sum, op) => sum + op.amount, 0);
+            const { data: setting } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'cash_opening')
+                .single();
             
-            // Get opening balance
-            let cashStatus = {};
-            try {
-                cashStatus = await kv.get('pos_cash_status') || { opening: 0 };
-            } catch (e) {}
-            
-            const opening = cashStatus.opening || 0;
+            const opening = parseFloat(setting?.value || 0);
+            const cashSales = (sales || []).filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const cardSales = (sales || []).filter(s => s.payment_method === 'card').reduce((sum, s) => sum + parseFloat(s.total), 0);
+            const deposits = (ops || []).filter(o => o.type === 'deposit').reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            const withdrawals = (ops || []).filter(o => o.type === 'withdraw').reduce((sum, o) => sum + Math.abs(parseFloat(o.amount)), 0);
             const closing = opening + cashSales + deposits - withdrawals;
+            
+            // Reset opening for next day
+            await supabase
+                .from('settings')
+                .upsert({ key: 'cash_opening', value: '0', updated_at: new Date().toISOString() });
             
             // Sales by user
             const userStats = {};
-            for (const sale of todaySales) {
-                const uId = sale.user_id || 0;
+            for (const sale of (sales || [])) {
                 const uName = sale.user_name || 'Necunoscut';
-                if (!userStats[uId]) {
-                    userStats[uId] = { user_name: uName, total: 0, transactions: 0 };
+                if (!userStats[uName]) {
+                    userStats[uName] = { user_name: uName, total: 0, transactions: 0 };
                 }
-                userStats[uId].total += sale.total || 0;
-                userStats[uId].transactions += 1;
+                userStats[uName].total += parseFloat(sale.total);
+                userStats[uName].transactions += 1;
             }
-            
-            // Reset for next day
-            try {
-                await kv.set('pos_cash_status', { opening: 0, last_z: new Date().toISOString() });
-                // Clear today's cash operations
-                const remainingOps = cashOps.filter(op => new Date(op.created_at) < today);
-                await kv.set('pos_cash_ops', remainingOps);
-            } catch (e) {}
             
             return res.json({
                 success: true,
@@ -206,7 +176,7 @@ export default async function handler(req, res) {
                     deposits,
                     withdrawals,
                     closing,
-                    transactions: todaySales.length,
+                    transactions: (sales || []).length,
                     sales_by_user: Object.values(userStats)
                 }
             });
@@ -215,7 +185,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Invalid action' });
 
     } catch (error) {
-        console.error('Reports API Error:', error);
+        console.error('Reports Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 }
