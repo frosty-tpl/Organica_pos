@@ -1,4 +1,10 @@
-import { supabase } from './lib/supabase.js';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+);
+
 
 function generateToken() {
     return 'tok_' + Math.random().toString(36).substr(2) + Date.now().toString(36);
