@@ -1038,6 +1038,42 @@
     </div>
 </div>
 
+<!-- Categories Management (Admin Only) -->
+<div class="card mb-4 admin-only">
+    <div class="card-header">
+        <h3>📂 Gestionare Categorii</h3>
+        <button class="btn btn-primary btn-sm" onclick="openCategory()">+ Adaugă Categorie</button>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info mb-4">
+            💡 <strong>Coduri iconițe disponibile:</strong><br>
+            <code>:beer:</code> 🍺 | 
+            <code>:wine:</code> 🍷 | 
+            <code>:whisky:</code> 🥃 | 
+            <code>:cocktail:</code> 🍹 | 
+            <code>:juice:</code> 🥤 | 
+            <code>:coffee:</code> ☕ | 
+            <code>:snack:</code> 🍿 | 
+            <code>:water:</code> 💧 | 
+            <code>:food:</code> 🍔
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Iconiță</th>
+                        <th>Nume</th>
+                        <th>Cod</th>
+                        <th>Ordine</th>
+                        <th>Acțiuni</th>
+                    </tr>
+                </thead>
+                <tbody id="categoriesTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 	
     <!-- Fiscal Printer Settings (Admin Only) -->
     <div class="card mb-4 admin-only">
@@ -1339,6 +1375,49 @@
         </div>
     </div>
 
+<!-- Category Modal -->
+<div class="modal-overlay" id="catModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="catModalTitle">📂 Categorie</h2>
+            <button class="modal-close" onclick="closeModal('catModal')">✕</button>
+        </div>
+        <form id="catForm">
+            <div class="modal-body">
+                <input type="hidden" id="catId">
+                <div class="form-group">
+                    <label>Nume Categorie</label>
+                    <input type="text" class="form-control" id="catName" required placeholder="Ex: Bere">
+                </div>
+                <div class="form-group">
+                    <label>Cod Iconiță</label>
+                    <select class="form-control" id="catIcon">
+                        <option value=":beer:">🍺 :beer: - Bere</option>
+                        <option value=":wine:">🍷 :wine: - Vin</option>
+                        <option value=":whisky:">🥃 :whisky: - Spirtoase</option>
+                        <option value=":cocktail:">🍹 :cocktail: - Cocktail</option>
+                        <option value=":juice:">🥤 :juice: - Sucuri</option>
+                        <option value=":coffee:">☕ :coffee: - Cafea</option>
+                        <option value=":snack:">🍿 :snack: - Snacks</option>
+                        <option value=":water:">💧 :water: - Apă</option>
+                        <option value=":food:">🍔 :food: - Mâncare</option>
+                        <option value=":box:">📦 :box: - Altele</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ordine Afișare</label>
+                    <input type="number" class="form-control" id="catOrder" value="0" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('catModal')">Anulează</button>
+                <button type="submit" class="btn btn-primary">💾 Salvează</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+	
     <!-- Confirm Modal -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal">
@@ -2112,6 +2191,67 @@ function deleteUser(id) {
 }
 
 // ============================================
+// CATEGORIES MANAGEMENT
+// ============================================
+async function loadCategoriesTable() {
+    if (user.role !== 'admin') return;
+    try {
+        const res = await api('categories');
+        if (res.success && $('categoriesTable')) {
+            const cats = res.data || [];
+            $('categoriesTable').innerHTML = cats.map(c => `
+                <tr>
+                    <td style="font-size: 24px;">${getIcon(c.icon)}</td>
+                    <td><strong>${c.name}</strong></td>
+                    <td><code>${c.icon || '-'}</code></td>
+                    <td>${c.sort_order || 0}</td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openCategory(${c.id})">✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteCategory(${c.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center text-muted">Nicio categorie</td></tr>';
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function openCategory(id = null) {
+    let cat = null;
+    if (id) {
+        try {
+            const res = await api(`categories?id=${id}`);
+            if (res.success) cat = res.data;
+        } catch (e) { console.error(e); }
+    }
+    
+    $('catModalTitle').textContent = cat ? '✏️ Editare Categorie' : '➕ Categorie Nouă';
+    $('catId').value = cat?.id || '';
+    $('catName').value = cat?.name || '';
+    $('catIcon').value = cat?.icon || ':box:';
+    $('catOrder').value = cat?.sort_order || 0;
+    openModal('catModal');
+}
+
+async function deleteCategory(id) {
+    confirmAction('Sigur ștergeți această categorie?', async () => {
+        loading(true);
+        try {
+            const res = await api('categories?action=delete', { 
+                method: 'POST', 
+                body: JSON.stringify({ id }) 
+            });
+            if (res.success) {
+                toast('Categorie ștearsă!');
+                await loadCategories();
+                await loadCategoriesTable();
+            }
+        } catch (e) { toast(e.message, 'error'); }
+        loading(false);
+    });
+}
+
+	
+// ============================================
 // SETTINGS
 // ============================================
 async function loadSettings() {
@@ -2641,6 +2781,37 @@ function updateCatPreview() {
     $('catPreview').textContent = getIcon(iconCode);
 }
 
+	// Form submit pentru categorii
+document.addEventListener('DOMContentLoaded', () => {
+    const catForm = document.getElementById('catForm');
+    if (catForm) {
+        catForm.onsubmit = async (e) => {
+            e.preventDefault();
+            loading(true);
+            try {
+                const id = $('catId').value;
+                const res = await api(`categories?action=${id ? 'update' : 'create'}`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        id: id || undefined,
+                        name: $('catName').value,
+                        icon: $('catIcon').value,
+                        sort_order: parseInt($('catOrder').value) || 0
+                    })
+                });
+                if (res.success) {
+                    closeModal('catModal');
+                    toast(id ? 'Categorie actualizată!' : 'Categorie adăugată!');
+                    await loadCategories();
+                    await loadCategoriesTable();
+                }
+            } catch (e) { toast(e.message, 'error'); }
+            loading(false);
+        };
+    }
+});
+
+	
 // Event listener pentru previzualizare
 document.addEventListener('DOMContentLoaded', () => {
     if ($('catIcon')) {
