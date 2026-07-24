@@ -1117,9 +1117,11 @@
                 </div>
             </div>
             <div class="flex gap-2 flex-wrap">
-                <button class="btn btn-primary" onclick="testFiscoConnection()">🔌 Test Conexiune</button>
-                <button class="btn btn-secondary" onclick="openCashDrawer()">🗃️ Deschide Sertar</button>
-            </div>
+   				 <button class="btn btn-primary" onclick="testFiscoConnection()">🔌 Test Conexiune</button>
+    			 <button class="btn btn-success" onclick="printTestReceipt()">🧾 Bon Test</button>
+    			 <button class="btn btn-secondary" onclick="openCashDrawer()">🗃️ Deschide Sertar</button>
+			</div>
+
         </div>
     </div>
 
@@ -2674,13 +2676,146 @@ async function saveAllSettings() {
     loading(false);
 }
 
-function testFiscoConnection() {
-    toast('Funcție în dezvoltare', 'info');
+// ================================================
+// FISCO / CASA DE MARCAT
+// ================================================
+async function testFiscoConnection() {
+    const fiscoUrl = $('settingFiscoUrl')?.value || 'http://localhost:4444';
+    
+    loading(true);
+    toast('Se testează conexiunea...', 'info');
+    
+    try {
+        const response = await fetch(fiscoUrl + '/status', {
+            method: 'GET',
+            signal: AbortSignal.timeout(5000)
+        });
+        
+        if (response.ok) {
+            toast('✅ Conexiune reușită cu Fisco Driver!', 'success');
+        } else {
+            toast('❌ Fisco Driver a răspuns cu eroare', 'error');
+        }
+    } catch (e) {
+        // Încearcă și cu POST dacă GET nu merge
+        try {
+            const response = await fetch(fiscoUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'status' }),
+                signal: AbortSignal.timeout(5000)
+            });
+            
+            if (response.ok) {
+                toast('✅ Conexiune reușită cu Fisco Driver!', 'success');
+            } else {
+                toast('❌ Fisco Driver nu răspunde corect', 'error');
+            }
+        } catch (e2) {
+            toast('❌ Nu se poate conecta la Fisco Driver. Verifică URL-ul și dacă programul rulează.', 'error');
+            console.error('Fisco connection error:', e2);
+        }
+    }
+    
+    loading(false);
 }
 
-function openCashDrawer() {
-    toast('Funcție în dezvoltare', 'info');
+async function printTestReceipt() {
+    const fiscoUrl = $('settingFiscoUrl')?.value || 'http://localhost:4444';
+    const fiscoEnabled = $('settingFiscoEnabled')?.checked;
+    
+    if (!fiscoEnabled) {
+        toast('⚠️ Imprimarea fiscală nu este activată! Activează-o din setări.', 'warning');
+        return;
+    }
+    
+    loading(true);
+    toast('Se trimite bon test...', 'info');
+    
+    try {
+        const testData = {
+            command: 'printNonFiscal',
+            lines: [
+                '================================',
+                '         BON TEST',
+                '         BarPOS v1.0',
+                '================================',
+                '',
+                'Data: ' + new Date().toLocaleDateString('ro-RO'),
+                'Ora:  ' + new Date().toLocaleTimeString('ro-RO'),
+                '',
+                'Conexiune: OK',
+                'Status: Functional',
+                '',
+                '--------------------------------',
+                'Produs Test 1          10.00 RON',
+                'Produs Test 2          15.50 RON',
+                '--------------------------------',
+                'TOTAL:                 25.50 RON',
+                '--------------------------------',
+                '',
+                '   Multumim pentru vizita!',
+                '',
+                '================================'
+            ]
+        };
+        
+        const response = await fetch(fiscoUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(testData),
+            signal: AbortSignal.timeout(15000)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success || result.status === 'ok' || response.ok) {
+            toast('✅ Bon test trimis cu succes!', 'success');
+        } else {
+            toast('❌ Eroare: ' + (result.error || result.message || 'Necunoscut'), 'error');
+        }
+    } catch (e) {
+        toast('❌ Eroare la trimiterea bonului: ' + e.message, 'error');
+        console.error('Print test receipt error:', e);
+    }
+    
+    loading(false);
 }
+
+async function openCashDrawer() {
+    const fiscoUrl = $('settingFiscoUrl')?.value || 'http://localhost:4444';
+    const fiscoEnabled = $('settingFiscoEnabled')?.checked;
+    
+    if (!fiscoEnabled) {
+        toast('⚠️ Imprimarea fiscală nu este activată!', 'warning');
+        return;
+    }
+    
+    loading(true);
+    
+    try {
+        const response = await fetch(fiscoUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'openDrawer' }),
+            signal: AbortSignal.timeout(5000)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success || result.status === 'ok' || response.ok) {
+            toast('✅ Sertar deschis!', 'success');
+        } else {
+            toast('❌ Eroare la deschiderea sertarului', 'error');
+        }
+    } catch (e) {
+        toast('❌ Eroare: ' + e.message, 'error');
+        console.error('Open drawer error:', e);
+    }
+    
+    loading(false);
+}
+
 
 // ================================================
 // CONFIRM DIALOG
