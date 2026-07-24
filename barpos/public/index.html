@@ -1555,7 +1555,7 @@
 // CONFIG & STATE
 // ================================================
 const API = '/api';
-let token = localStorage.getItem('pos_token');
+let token = sessionStorage.getItem('pos_token');
 let user = null;
 let categories = [];
 let products = [];
@@ -1636,7 +1636,7 @@ async function api(endpoint, options = {}) {
         if (!res.ok) {
             if (res.status === 401) { 
                 token = null; 
-                localStorage.removeItem('pos_token'); 
+                sessionStorage.removeItem('pos_token'); 
                 showLogin(); 
             }
             throw new Error(data.error || 'Eroare server');
@@ -1690,7 +1690,7 @@ $('loginForm').onsubmit = async e => {
         });
         if (res.success) {
             token = res.data.token;
-            localStorage.setItem('pos_token', token);
+            sessionStorage.setItem('pos_token', token);
             user = res.data.user;
             showApp();
             initApp();
@@ -1706,7 +1706,7 @@ async function logout() {
     loading(true);
     try { await api('auth?action=logout', { method: 'POST' }); } catch {}
     token = null;
-    localStorage.removeItem('pos_token');
+    sessionStorage.removeItem('pos_token');
     user = null;
     cart = [];
     showLogin();
