@@ -27,11 +27,16 @@ export default async function handler(req, res) {
                 .from('sales')
                 .select('*, sale_items(*)');
             
-            //if (fromDate) query = query.gte('created_at', fromDate + 'T00:00:00');
-            //if (toDate) query = query.lte('created_at', toDate + 'T23:59:59');
+            if (fromDate) query = query.gte('created_at', fromDate + 'T00:00:00');
+            if (toDate) query = query.lte('created_at', toDate + 'T23:59:59');
             if (userId && userId !== 'all') query = query.eq('user_id', parseInt(userId));
             
             const { data: sales, error } = await query;
+            
+            const { data: sales, error } = await query;
+            console.log('DEBUG sales:', sales?.length, JSON.stringify(sales?.slice(0, 2)));
+            if (error) throw error;
+
             if (error) throw error;
             
             const total = sales.reduce((sum, s) => sum + parseFloat(s.total), 0);
