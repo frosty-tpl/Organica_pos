@@ -2386,6 +2386,9 @@ async function genSalesReport() {
             $('topTable').innerHTML = (d.top_products || []).map(p => `
                 <tr><td>${p.name}</td><td>${p.quantity}</td><td>${fmt(p.revenue)} RON</td></tr>
             `).join('') || '<tr><td colspan="3" class="text-center text-muted">-</td></tr>';
+			$('userSalesTable').innerHTML = (d.sales_by_user || []).map(u => `
+                <tr><td>${u.user_name}</td><td>${u.transactions}</td><td>${fmt(u.total)} RON</td></tr>
+            `).join('') || '<tr><td colspan="3" class="text-center text-muted">-</td></tr>';
         }
     } catch (e) { toast(e.message, 'error'); }
     loading(false);
