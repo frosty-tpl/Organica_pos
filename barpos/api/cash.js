@@ -105,7 +105,32 @@ export default async function handler(req, res) {
             return res.json({ success: true, data });
         }
 
-        return res.status(400).json({ success: false, error: 'Invalid action' });
+        // DEPOSIT direct
+if ((action === 'deposit' || action === 'withdraw') && req.method === 'POST') {
+    let body = req.body;
+    if (typeof body === 'string') body = JSON.parse(body);
+    
+    const amount = parseFloat(body.amount);
+    
+    const { data, error } = await supabase
+        .from('cash_operations')
+        .insert({
+            type: action,
+            amount: action === 'withdraw' ? -amount : amount,
+            description: body.description || '',
+            balance: 0,
+            user_id: body.user_id || null,
+            user_name: body.user_name || ''
+        })
+        .select()
+        .single();
+    
+    if (error) throw error;
+    return res.json({ success: true, data });
+}
+
+return res.status(400).json({ success: false, error: 'Invalid action' });
+
 
     } catch (error) {
         console.error('Cash Error:', error);
