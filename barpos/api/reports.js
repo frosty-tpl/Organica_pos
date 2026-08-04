@@ -56,17 +56,17 @@ export default async function handler(req, res) {
                 .sort((a, b) => b.revenue - a.revenue)
                 .slice(0, 10);
             
-            // Sales by user
-            const userStats = {};
-            for (const sale of sales) {
-                const uId = sale.user_id || 0;
-                const uName = sale.user_name || 'Necunoscut';
-                if (!userStats[uId]) {
-                    userStats[uId] = { user_id: uId, user_name: uName, total: 0, transactions: 0 };
-                }
-                userStats[uId].total += parseFloat(sale.total);
-                userStats[uId].transactions += 1;
+           // Sales by user
+        const userStats = {};
+        for (const sale of sales) {
+        const uName = sale.user_name || 'Necunoscut';
+        if (!userStats[uName]) {
+            userStats[uName] = { user_id: sale.user_id || 0, user_name: uName, total: 0, transactions: 0 };
             }
+        userStats[uName].total += parseFloat(sale.total);
+        userStats[uName].transactions += 1;
+            }
+
             
             return res.json({
                 success: true,
