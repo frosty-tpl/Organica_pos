@@ -47,7 +47,8 @@ export default async function handler(req, res) {
                         productStats[key] = { name: item.product_name, quantity: 0, revenue: 0 };
                     }
                     productStats[key].quantity += item.quantity;
-                    productStats[key].revenue += item.quantity * parseFloat(item.price);
+                    productStats[key].revenue += item.quantity * parseFloat(item.unit_price || item.price || 0);
+
                 }
             }
             
