@@ -80,28 +80,30 @@ export default async function handler(req, res) {
             
             if (itemsError) throw itemsError;
             
-            // Update stock
-            for (const item of body.items) {
-                await supabase.rpc('decrement_stock', {
-                    prod_id: item.product_id,
-                    qty: item.quantity
-                }).catch(() => {
-                    // Fallback if RPC doesn't exist
-                    supabase
-                        .from('products')
-                        .select('stock')
-                        .eq('id', item.product_id)
-                        .single()
-                        .then(({ data }) => {
-                            if (data) {
-                                supabase
-                                    .from('products')
-                                    .update({ stock: Math.max(0, data.stock - item.quantity) })
-                                    .eq('id', item.product_id);
-                            }
-                        });
-                });
-            }
+          // Update stock for each item
+for (const item of body.items) {
+    const { error: stockError } = await supabase
+        .from('products')
+        .update({ stock: supabase.rpc('decrement', { x: item.quantity }) })
+        .eq('id', item.product_id);
+    
+    // Fallback: dacă RPC nu merge, scade manual
+    if (stockError) {
+        const { data: product } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', item.product_id)
+            .single();
+        
+        if (product) {
+            await supabase
+                .from('products')
+                .update({ stock: product.stock - item.quantity })
+                .eq('id', item.product_id);
+        }
+    }
+}
+
             
             return res.json({ success: true, data: sale });
         }
