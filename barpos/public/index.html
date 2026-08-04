@@ -1905,12 +1905,26 @@ async function loadProdTable() {
         return;
     }
     
+    const isAdmin = user && user.role === 'admin';
+    
     tableBody.innerHTML = products.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
         const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
         const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
         const statusBadge = status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
         const statusText = status === 'ok' ? 'În stoc' : status === 'low' ? 'Stoc scăzut' : 'Epuizat';
+        
+        // Butoanele apar doar pentru admin
+        const actionButtons = isAdmin ? `
+            <div style="display:flex;gap:6px;">
+                <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})" title="Editează">
+                    ✏️ Editare
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})" title="Șterge">
+                    🗑️ Șterge
+                </button>
+            </div>
+        ` : '<span class="text-muted">-</span>';
         
         return `
             <tr>
@@ -1924,22 +1938,19 @@ async function loadProdTable() {
                 <td><strong>${fmt(p.price)} RON</strong></td>
                 <td><span class="badge ${statusBadge}">${p.stock}</span></td>
                 <td><span class="badge ${statusBadge}">${statusText}</span></td>
-                <td>
-                    <div style="display:flex;gap:6px;">
-                        <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})" title="Editează">
-                            ✏️ Editare
-                        </button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})" title="Șterge">
-                            🗑️ Șterge
-                        </button>
-                    </div>
-                </td>
+                <td>${actionButtons}</td>
             </tr>
         `;
     }).join('');
 }
 
 function openProduct(id = null) {
+    // Verifică dacă e admin
+    if (!user || user.role !== 'admin') {
+        toast('⛔ Doar administratorii pot modifica produsele!', 'error');
+        return;
+    }
+    
     const p = id ? products.find(x => x.id === id) : null;
     
     $('prodModalTitle').textContent = p ? '✏️ Editare Produs' : '➕ Produs Nou';
@@ -1955,6 +1966,12 @@ function openProduct(id = null) {
 }
 
 function deleteProduct(id) {
+    // Verifică dacă e admin
+    if (!user || user.role !== 'admin') {
+        toast('⛔ Doar administratorii pot șterge produse!', 'error');
+        return;
+    }
+    
     const p = products.find(x => x.id === id);
     if (!p) return;
     
@@ -1974,33 +1991,6 @@ function deleteProduct(id) {
         loading(false);
     });
 }
-
-$('prodForm').onsubmit = async e => {
-    e.preventDefault();
-    loading(true);
-    try {
-        const id = $('prodId').value;
-        const res = await api(`products?action=${id ? 'update' : 'create'}`, {
-            method: 'POST',
-            body: JSON.stringify({
-                id: id || undefined,
-                name: $('prodName').value,
-                category_id: parseInt($('prodCat').value),
-                icon: $('prodIcon').value,
-                price: parseFloat($('prodPrice').value),
-                stock: parseInt($('prodStock').value),
-                min_stock: parseInt($('prodMinStock').value)
-            })
-        });
-        if (res.success) {
-            closeModal('prodModal');
-            toast(id ? 'Produs actualizat!' : 'Produs adăugat!');
-            await loadProducts();
-            await loadProdTable();
-        }
-    } catch (e) { toast(e.message, 'error'); }
-    loading(false);
-};
 // ================================================
 // CART
 // ================================================
@@ -2306,34 +2296,8 @@ async function genZReport() {
 }
 
 // ================================================
-// INVENTORY
+// INVENTORY - Restricții admin
 // ================================================
-async function loadInventory() {
-    if (categories.length === 0) {
-        await loadCategories();
-    }
-    
-    try {
-        const res = await api('inventory?action=list&status=' + invFilter);
-        if (res.success) {
-            products = res.data || [];
-            
-            const stats = res.stats || {};
-            if ($('invTotal')) $('invTotal').textContent = stats.total || 0;
-            if ($('invOk')) $('invOk').textContent = stats.ok || 0;
-            if ($('invLow')) $('invLow').textContent = stats.low || 0;
-            if ($('invOut')) $('invOut').textContent = stats.out || 0;
-            if ($('invValue')) $('invValue').textContent = fmt(stats.value || 0);
-            
-            renderInventory();
-        }
-    } catch (e) { 
-        console.error('Inventory error:', e); 
-        await loadProducts();
-        renderInventory();
-    }
-}
-
 function renderInventory() {
     let list = products;
     if (invFilter === 'ok') list = products.filter(p => p.stock > (p.min_stock || 5));
@@ -2342,10 +2306,18 @@ function renderInventory() {
     
     if (!$('invTable')) return;
     
+    const isAdmin = user && user.role === 'admin';
+    
     $('invTable').innerHTML = list.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
         const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
         const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        
+        // Buton ajustare doar pentru admin
+        const actionButton = isAdmin 
+            ? `<button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button>`
+            : '<span class="text-muted">-</span>';
+        
         return `
             <tr>
                 <td><strong>${icon} ${p.name}</strong></td>
@@ -2354,13 +2326,19 @@ function renderInventory() {
                 <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${status === 'ok' ? 'OK' : status === 'low' ? 'Scăzut' : 'Epuizat'}</span></td>
                 <td>${fmt(p.price)} RON</td>
                 <td>${fmt((p.stock || 0) * (parseFloat(p.price) || 0))} RON</td>
-                <td><button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button></td>
+                <td>${actionButton}</td>
             </tr>
         `;
     }).join('') || '<tr><td colspan="7" class="text-center text-muted">Niciun produs</td></tr>';
 }
 
 function openStock(id) {
+    // Verifică dacă e admin
+    if (!user || user.role !== 'admin') {
+        toast('⛔ Doar administratorii pot ajusta stocul!', 'error');
+        return;
+    }
+    
     const p = products.find(x => x.id === id);
     if (!p) return;
     
@@ -2370,62 +2348,6 @@ function openStock(id) {
     $('stockQty').value = p.stock;
     $('stockReason').value = '';
     openModal('stockModal');
-}
-
-$('stockForm').onsubmit = async e => {
-    e.preventDefault();
-    const id = $('stockProdId').value;
-    const type = $('stockType').value;
-    const qty = parseInt($('stockQty').value);
-    const reason = $('stockReason').value;
-    
-    closeModal('stockModal');
-    loading(true);
-    
-    try {
-        const res = await api('inventory?action=adjust', {
-            method: 'POST',
-            body: JSON.stringify({ product_id: id, type, quantity: qty, reason })
-        });
-        
-        if (res.success) {
-            toast('Stoc actualizat!');
-            await loadProducts();
-            await loadInventory();
-        }
-    } catch (e) { toast(e.message, 'error'); }
-    
-    loading(false);
-};
-
-function exportInventory() {
-    window.open(`${API}/inventory?action=export&token=${token}`, '_blank');
-}
-
-async function printInventory() {
-    loading(true);
-    try {
-        const res = await api('inventory?action=report');
-        if (res.success) {
-            const d = res.data;
-            $('repModalTitle').textContent = '📦 Raport Gestiune Stoc';
-            $('repModalBody').innerHTML = `
-                <div class="receipt">
-                    <div class="receipt-header">
-                        <div class="receipt-title">RAPORT GESTIUNE STOC</div>
-                        <div>${new Date().toLocaleString('ro-RO')}</div>
-                    </div>
-                    <div class="receipt-row"><span>Total produse:</span><span>${d.summary?.total_products || 0}</span></div>
-                    <div class="receipt-row"><span>În stoc OK:</span><span>${d.summary?.in_stock || 0}</span></div>
-                    <div class="receipt-row"><span>Stoc scăzut:</span><span>${d.summary?.low_stock || 0}</span></div>
-                    <div class="receipt-row"><span>Epuizate:</span><span>${d.summary?.out_of_stock || 0}</span></div>
-                    <div class="receipt-row receipt-total"><span>VALOARE TOTALĂ:</span><span>${fmt(d.summary?.total_value)} RON</span></div>
-                </div>
-            `;
-            openModal('repModal');
-        }
-    } catch (e) { toast(e.message, 'error'); }
-    loading(false);
 }
 // ================================================
 // REPORTS
