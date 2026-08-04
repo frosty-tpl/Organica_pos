@@ -33,9 +33,9 @@ export default async function handler(req, res) {
             
             const { data: sales, error } = await query;
             
-            const { data: sales, error } = await query;
+            
             console.log('DEBUG sales:', sales?.length, JSON.stringify(sales?.slice(0, 2)));
-            if (error) throw error;
+          
 
             if (error) throw error;
             
