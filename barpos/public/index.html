@@ -876,7 +876,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>📦 Gestiune Stoc</h3>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 admin-only">
                             <button class="btn btn-secondary btn-sm" onclick="exportInventory()">📥 Export CSV</button>
                             <button class="btn btn-primary btn-sm" onclick="printInventory()">🖨️ Raport</button>
                         </div>
@@ -912,7 +912,7 @@
     <div class="card">
         <div class="card-header">
             <h3>🏷️ Gestionare Produse</h3>
-            <button class="btn btn-primary btn-sm" onclick="openProduct()">+ Adaugă Produs</button>
+            <button class="btn btn-primary btn-sm admin-only" onclick="openProduct()">+ Adaugă Produs</button>
         </div>
         <div class="card-body">
             <div class="table-wrap">
