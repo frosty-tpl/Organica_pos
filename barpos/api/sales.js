@@ -70,7 +70,7 @@ export default async function handler(req, res) {
                 product_id: item.product_id,
                 product_name: item.name,
                 quantity: item.quantity,
-                unit_price: item.price
+                unit_price: item.price,
                 total: item.price * item.quantity
             }));
             
