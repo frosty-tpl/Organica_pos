@@ -1,11 +1,11 @@
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_ANON_KEY
 );
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -106,21 +106,14 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // LOW STOCK - ingrediente cu stoc scăzut
+        // LOW STOCK
         if (action === 'low_stock') {
-            const { data, error } = await supabase
-                .from('ingredients')
-                .select('*')
-                .filter('stock', 'lte', supabase.rpc('get_min_stock'))
-                .order('name');
-            
-            // Fallback - ia toate și filtrează manual
-            const { data: all, error: allError } = await supabase
+            const { data: all, error } = await supabase
                 .from('ingredients')
                 .select('*')
                 .order('name');
             
-            if (allError) throw allError;
+            if (error) throw error;
             
             const lowStock = all.filter(i => parseFloat(i.stock) <= parseFloat(i.min_stock));
             return res.json({ success: true, data: lowStock });
@@ -131,4 +124,4 @@ module.exports = async (req, res) => {
     } catch (e) {
         return res.status(500).json({ success: false, error: e.message });
     }
-};
+}
