@@ -1792,11 +1792,11 @@
 </div>
 
 <!-- INGREDIENT MODAL -->
-<div id="ingredientModal" class="modal">
-    <div class="modal-content">
+<div class="modal-overlay" id="ingredientModal">
+    <div class="modal">
         <div class="modal-header">
             <h3 id="ingredientModalTitle">➕ Ingredient Nou</h3>
-            <button class="modal-close" onclick="closeModal('ingredientModal')">&times;</button>
+            <button class="btn-close" onclick="closeModal('ingredientModal')">✕</button>
         </div>
         <form id="ingredientForm">
             <input type="hidden" id="ingId">
@@ -1838,12 +1838,12 @@
     </div>
 </div>
 
-<!-- SUPPLY MODAL (pentru aprovizionare) -->
-<div id="supplyModal" class="modal">
-    <div class="modal-content modal-sm">
+<!-- SUPPLY MODAL -->
+<div class="modal-overlay" id="supplyModal">
+    <div class="modal sm">
         <div class="modal-header">
             <h3>📦 Aprovizionare</h3>
-            <button class="modal-close" onclick="closeModal('supplyModal')">&times;</button>
+            <button class="btn-close" onclick="closeModal('supplyModal')">✕</button>
         </div>
         <form id="supplyForm">
             <input type="hidden" id="supplyIngId">
@@ -1864,11 +1864,11 @@
 </div>
 
 <!-- RECIPE MODAL -->
-<div id="recipeModal" class="modal">
-    <div class="modal-content modal-lg">
+<div class="modal-overlay" id="recipeModal">
+    <div class="modal lg">
         <div class="modal-header">
             <h3>📋 Rețetă: <span id="recipeProductName"></span></h3>
-            <button class="modal-close" onclick="closeModal('recipeModal')">&times;</button>
+            <button class="btn-close" onclick="closeModal('recipeModal')">✕</button>
         </div>
         <div class="modal-body">
             <input type="hidden" id="recipeProductId">
@@ -1898,6 +1898,7 @@
         </div>
     </div>
 </div>
+
 
 
 <script>
