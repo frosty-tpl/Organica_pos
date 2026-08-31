@@ -943,7 +943,8 @@
             <button class="nav-item" data-tab="products">🏷️ Produse</button>
             <button class="nav-item" data-tab="reports">📊 Rapoarte</button>
             <button class="nav-item" data-tab="settings">⚙️ Setări</button>
-			<button class="nav-btn" onclick="showSection('ingredients')">🧪 Ingrediente</button>
+			<button class="nav-item" data-tab="ingredients">🧪 Ingrediente</button>
+
 
         </nav>
 
@@ -1109,7 +1110,8 @@
 </div>
 
 <!-- INGREDIENTS SECTION -->
-<div id="ingredientsSection" class="section" style="display:none;">
+<div id="tab-ingredients" class="tab-content">
+
     <div class="section-header">
         <h2>🧪 Ingrediente</h2>
         <button class="btn btn-primary" onclick="openIngredient()">➕ Ingredient Nou</button>
@@ -2097,6 +2099,8 @@ function initTabs() {
                 case 'products': loadProdTable(); break;
                 case 'settings': loadUsers(); loadCategoriesTable(); loadSettings(); break;
                 case 'reports': loadUserFilter(); break;
+				case 'ingredients': loadIngredientsTable();break;
+	
             }
         };
     });
