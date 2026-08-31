@@ -5,6 +5,46 @@ const supabase = createClient(
     process.env.SUPABASE_ANON_KEY
 );
 
+// Funcție pentru scăderea ingredientelor din stoc
+async function decrementIngredients(productId, quantity) {
+    // Verifică dacă produsul e complex
+    const { data: product } = await supabase
+        .from('products')
+        .select('product_type')
+        .eq('id', productId)
+        .single();
+    
+    if (product?.product_type !== 'complex') {
+        return; // Produs simplu, nu are rețetă
+    }
+
+    // Ia rețeta
+    const { data: recipe } = await supabase
+        .from('recipes')
+        .select('ingredient_id, quantity')
+        .eq('product_id', productId);
+    
+    if (!recipe || recipe.length === 0) return;
+
+    // Scade fiecare ingredient
+    for (const item of recipe) {
+        const { data: ingredient } = await supabase
+            .from('ingredients')
+            .select('stock')
+            .eq('id', item.ingredient_id)
+            .single();
+        
+        if (ingredient) {
+            const newStock = parseFloat(ingredient.stock) - (item.quantity * quantity);
+            await supabase
+                .from('ingredients')
+                .update({ stock: Math.max(0, newStock) })
+                .eq('id', item.ingredient_id);
+        }
+    }
+}
+
+
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -80,22 +120,20 @@ export default async function handler(req, res) {
             
             if (itemsError) throw itemsError;
             
-          // Update stock for each item
+// Update stock for each item
 for (const item of body.items) {
-    const { error: stockError } = await supabase
+    const { data: product } = await supabase
         .from('products')
-        .update({ stock: supabase.rpc('decrement', { x: item.quantity }) })
-        .eq('id', item.product_id);
+        .select('stock, product_type')
+        .eq('id', item.product_id)
+        .single();
     
-    // Fallback: dacă RPC nu merge, scade manual
-    if (stockError) {
-        const { data: product } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', item.product_id)
-            .single();
-        
-        if (product) {
+    if (product) {
+        if (product.product_type === 'complex') {
+            // Produs complex - scade ingredientele
+            await decrementIngredients(item.product_id, item.quantity);
+        } else {
+            // Produs simplu - scade stocul produsului
             await supabase
                 .from('products')
                 .update({ stock: product.stock - item.quantity })
