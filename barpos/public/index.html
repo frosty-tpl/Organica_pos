@@ -1142,114 +1142,6 @@
     </div>
 </div>
 
-<!-- INGREDIENT MODAL -->
-<div id="ingredientModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="ingredientModalTitle">➕ Ingredient Nou</h3>
-            <button class="modal-close" onclick="closeModal('ingredientModal')">&times;</button>
-        </div>
-        <form id="ingredientForm">
-            <input type="hidden" id="ingId">
-            <div class="form-group">
-                <label>Nume ingredient</label>
-                <input type="text" id="ingName" required placeholder="ex: Vodka, Rom, Lime...">
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Unitate de măsură</label>
-                    <select id="ingUnit">
-                        <option value="ml">ml (mililitri)</option>
-                        <option value="l">l (litri)</option>
-                        <option value="g">g (grame)</option>
-                        <option value="kg">kg (kilograme)</option>
-                        <option value="buc">buc (bucăți)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Cost per unitate (RON)</label>
-                    <input type="number" id="ingCost" step="0.01" min="0" value="0" placeholder="0.00">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Stoc actual</label>
-                    <input type="number" id="ingStock" step="0.001" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label>Stoc minim (alertă)</label>
-                    <input type="number" id="ingMinStock" step="0.001" min="0" value="0">
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('ingredientModal')">Anulează</button>
-                <button type="submit" class="btn btn-primary">💾 Salvează</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- SUPPLY MODAL (pentru aprovizionare) -->
-<div id="supplyModal" class="modal">
-    <div class="modal-content modal-sm">
-        <div class="modal-header">
-            <h3>📦 Aprovizionare</h3>
-            <button class="modal-close" onclick="closeModal('supplyModal')">&times;</button>
-        </div>
-        <form id="supplyForm">
-            <input type="hidden" id="supplyIngId">
-            <div class="form-group">
-                <label>Ingredient: <strong id="supplyIngName"></strong></label>
-            </div>
-            <div class="form-group">
-                <label>Cantitate de adăugat</label>
-                <input type="number" id="supplyQty" step="0.001" min="0.001" required>
-                <small class="text-muted">Stoc actual: <span id="supplyCurrentStock"></span></small>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('supplyModal')">Anulează</button>
-                <button type="submit" class="btn btn-success">📦 Adaugă în stoc</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- RECIPE MODAL -->
-<div id="recipeModal" class="modal">
-    <div class="modal-content modal-lg">
-        <div class="modal-header">
-            <h3>📋 Rețetă: <span id="recipeProductName"></span></h3>
-            <button class="modal-close" onclick="closeModal('recipeModal')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <input type="hidden" id="recipeProductId">
-            
-            <div class="recipe-builder">
-                <div class="recipe-add">
-                    <select id="recipeIngredientSelect" class="form-control">
-                        <option value="">-- Selectează ingredient --</option>
-                    </select>
-                    <input type="number" id="recipeIngredientQty" step="0.001" min="0.001" placeholder="Cantitate">
-                    <button type="button" class="btn btn-primary" onclick="addRecipeIngredient()">➕</button>
-                </div>
-                
-                <div class="recipe-list" id="recipeList">
-                    <!-- Ingredientele rețetei vor fi aici -->
-                </div>
-                
-                <div id="recipeCost" class="recipe-cost" style="display:none;">
-                    <strong>💰 Cost total rețetă: <span id="recipeTotalCost">0.00</span> RON</strong>
-                </div>
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('recipeModal')">Anulează</button>
-                <button type="button" class="btn btn-success" onclick="saveRecipe()">💾 Salvează Rețeta</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 			
            <!-- Reports Tab -->
 <div class="tab-content" id="tab-reports">
@@ -1896,6 +1788,115 @@
         </form>
     </div>
 </div>
+
+<!-- INGREDIENT MODAL -->
+<div id="ingredientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="ingredientModalTitle">➕ Ingredient Nou</h3>
+            <button class="modal-close" onclick="closeModal('ingredientModal')">&times;</button>
+        </div>
+        <form id="ingredientForm">
+            <input type="hidden" id="ingId">
+            <div class="form-group">
+                <label>Nume ingredient</label>
+                <input type="text" id="ingName" required placeholder="ex: Vodka, Rom, Lime...">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Unitate de măsură</label>
+                    <select id="ingUnit">
+                        <option value="ml">ml (mililitri)</option>
+                        <option value="l">l (litri)</option>
+                        <option value="g">g (grame)</option>
+                        <option value="kg">kg (kilograme)</option>
+                        <option value="buc">buc (bucăți)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cost per unitate (RON)</label>
+                    <input type="number" id="ingCost" step="0.01" min="0" value="0" placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Stoc actual</label>
+                    <input type="number" id="ingStock" step="0.001" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Stoc minim (alertă)</label>
+                    <input type="number" id="ingMinStock" step="0.001" min="0" value="0">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('ingredientModal')">Anulează</button>
+                <button type="submit" class="btn btn-primary">💾 Salvează</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SUPPLY MODAL (pentru aprovizionare) -->
+<div id="supplyModal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>📦 Aprovizionare</h3>
+            <button class="modal-close" onclick="closeModal('supplyModal')">&times;</button>
+        </div>
+        <form id="supplyForm">
+            <input type="hidden" id="supplyIngId">
+            <div class="form-group">
+                <label>Ingredient: <strong id="supplyIngName"></strong></label>
+            </div>
+            <div class="form-group">
+                <label>Cantitate de adăugat</label>
+                <input type="number" id="supplyQty" step="0.001" min="0.001" required>
+                <small class="text-muted">Stoc actual: <span id="supplyCurrentStock"></span></small>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('supplyModal')">Anulează</button>
+                <button type="submit" class="btn btn-success">📦 Adaugă în stoc</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RECIPE MODAL -->
+<div id="recipeModal" class="modal">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3>📋 Rețetă: <span id="recipeProductName"></span></h3>
+            <button class="modal-close" onclick="closeModal('recipeModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="recipeProductId">
+            
+            <div class="recipe-builder">
+                <div class="recipe-add">
+                    <select id="recipeIngredientSelect" class="form-control">
+                        <option value="">-- Selectează ingredient --</option>
+                    </select>
+                    <input type="number" id="recipeIngredientQty" step="0.001" min="0.001" placeholder="Cantitate">
+                    <button type="button" class="btn btn-primary" onclick="addRecipeIngredient()">➕</button>
+                </div>
+                
+                <div class="recipe-list" id="recipeList">
+                    <!-- Ingredientele rețetei vor fi aici -->
+                </div>
+                
+                <div id="recipeCost" class="recipe-cost" style="display:none;">
+                    <strong>💰 Cost total rețetă: <span id="recipeTotalCost">0.00</span> RON</strong>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('recipeModal')">Anulează</button>
+                <button type="button" class="btn btn-success" onclick="saveRecipe()">💾 Salvează Rețeta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 // ================================================
