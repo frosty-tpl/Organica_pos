@@ -700,6 +700,178 @@
         .flex-wrap { flex-wrap: wrap; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+		/* Recipe Builder */
+.recipe-builder {
+    padding: 15px 0;
+}
+
+.recipe-add {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.recipe-add select {
+    flex: 2;
+}
+
+.recipe-add input {
+    flex: 1;
+    min-width: 100px;
+}
+
+.recipe-list {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-height: 100px;
+    padding: 10px;
+    background: var(--bg);
+}
+
+.recipe-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: var(--card);
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.recipe-item:last-child {
+    margin-bottom: 0;
+}
+
+.recipe-item-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.recipe-item-name {
+    font-weight: 600;
+}
+
+.recipe-item-qty {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.recipe-item-cost {
+    color: var(--muted);
+    font-size: 0.9em;
+}
+
+.recipe-item .btn-danger {
+    padding: 5px 10px;
+    font-size: 14px;
+}
+
+.recipe-cost {
+    margin-top: 15px;
+    padding: 15px;
+    background: var(--success);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.recipe-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px;
+}
+
+/* Alert pentru stoc scăzut */
+.alert {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    border: 1px solid #dc3545;
+    color: #721c24;
+}
+
+/* Modal sizes */
+.modal-sm .modal-content {
+    max-width: 400px;
+}
+
+.modal-lg .modal-content {
+    max-width: 700px;
+}
+
+/* Form row */
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Product type toggle */
+.product-type-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.product-type-btn {
+    flex: 1;
+    padding: 15px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.product-type-btn:hover {
+    border-color: var(--primary);
+}
+
+.product-type-btn.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: white;
+}
+
+.product-type-btn .icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Badge pentru tip produs */
+.badge-simple {
+    background: #6c757d;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.badge-complex {
+    background: #9c27b0;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+		
         .admin-only { display: none; }
     </style>
 </head>
@@ -771,6 +943,8 @@
             <button class="nav-item" data-tab="products">🏷️ Produse</button>
             <button class="nav-item" data-tab="reports">📊 Rapoarte</button>
             <button class="nav-item" data-tab="settings">⚙️ Setări</button>
+			<button class="nav-btn" onclick="showSection('ingredients')">🧪 Ingrediente</button>
+
         </nav>
 
         <!-- Main Content -->
@@ -934,6 +1108,149 @@
     </div>
 </div>
 
+<!-- INGREDIENTS SECTION -->
+<div id="ingredientsSection" class="section" style="display:none;">
+    <div class="section-header">
+        <h2>🧪 Ingrediente</h2>
+        <button class="btn btn-primary" onclick="openIngredient()">➕ Ingredient Nou</button>
+    </div>
+    
+    <!-- Alertă stoc scăzut -->
+    <div id="lowStockAlert" class="alert alert-warning mb-4" style="display:none;">
+        <strong>⚠️ Ingrediente cu stoc scăzut:</strong>
+        <span id="lowStockList"></span>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nume</th>
+                            <th>Unitate</th>
+                            <th>Stoc</th>
+                            <th>Stoc Minim</th>
+                            <th>Cost/Unitate</th>
+                            <th>Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ingredientsTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- INGREDIENT MODAL -->
+<div id="ingredientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="ingredientModalTitle">➕ Ingredient Nou</h3>
+            <button class="modal-close" onclick="closeModal('ingredientModal')">&times;</button>
+        </div>
+        <form id="ingredientForm">
+            <input type="hidden" id="ingId">
+            <div class="form-group">
+                <label>Nume ingredient</label>
+                <input type="text" id="ingName" required placeholder="ex: Vodka, Rom, Lime...">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Unitate de măsură</label>
+                    <select id="ingUnit">
+                        <option value="ml">ml (mililitri)</option>
+                        <option value="l">l (litri)</option>
+                        <option value="g">g (grame)</option>
+                        <option value="kg">kg (kilograme)</option>
+                        <option value="buc">buc (bucăți)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cost per unitate (RON)</label>
+                    <input type="number" id="ingCost" step="0.01" min="0" value="0" placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Stoc actual</label>
+                    <input type="number" id="ingStock" step="0.001" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Stoc minim (alertă)</label>
+                    <input type="number" id="ingMinStock" step="0.001" min="0" value="0">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('ingredientModal')">Anulează</button>
+                <button type="submit" class="btn btn-primary">💾 Salvează</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SUPPLY MODAL (pentru aprovizionare) -->
+<div id="supplyModal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>📦 Aprovizionare</h3>
+            <button class="modal-close" onclick="closeModal('supplyModal')">&times;</button>
+        </div>
+        <form id="supplyForm">
+            <input type="hidden" id="supplyIngId">
+            <div class="form-group">
+                <label>Ingredient: <strong id="supplyIngName"></strong></label>
+            </div>
+            <div class="form-group">
+                <label>Cantitate de adăugat</label>
+                <input type="number" id="supplyQty" step="0.001" min="0.001" required>
+                <small class="text-muted">Stoc actual: <span id="supplyCurrentStock"></span></small>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('supplyModal')">Anulează</button>
+                <button type="submit" class="btn btn-success">📦 Adaugă în stoc</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RECIPE MODAL -->
+<div id="recipeModal" class="modal">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3>📋 Rețetă: <span id="recipeProductName"></span></h3>
+            <button class="modal-close" onclick="closeModal('recipeModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="recipeProductId">
+            
+            <div class="recipe-builder">
+                <div class="recipe-add">
+                    <select id="recipeIngredientSelect" class="form-control">
+                        <option value="">-- Selectează ingredient --</option>
+                    </select>
+                    <input type="number" id="recipeIngredientQty" step="0.001" min="0.001" placeholder="Cantitate">
+                    <button type="button" class="btn btn-primary" onclick="addRecipeIngredient()">➕</button>
+                </div>
+                
+                <div class="recipe-list" id="recipeList">
+                    <!-- Ingredientele rețetei vor fi aici -->
+                </div>
+                
+                <div id="recipeCost" class="recipe-cost" style="display:none;">
+                    <strong>💰 Cost total rețetă: <span id="recipeTotalCost">0.00</span> RON</strong>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('recipeModal')">Anulează</button>
+                <button type="button" class="btn btn-success" onclick="saveRecipe()">💾 Salvează Rețeta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+			
            <!-- Reports Tab -->
 <div class="tab-content" id="tab-reports">
     <div class="card mb-4">
@@ -1470,6 +1787,21 @@
     </div>
 </div>
 
+	<div class="form-group">
+    <label>Tip Produs</label>
+    <div class="product-type-toggle">
+        <div class="product-type-btn active" id="typeSimple" onclick="setProductType('simple')">
+            <span class="icon">🍺</span>
+            Simplu
+        </div>
+        <div class="product-type-btn" id="typeComplex" onclick="setProductType('complex')">
+            <span class="icon">🍹</span>
+            Complex (cu rețetă)
+        </div>
+    </div>
+    <input type="hidden" id="prodType" value="simple">
+</div>
+
 	
     <!-- Confirm Modal -->
     <div class="modal-overlay" id="confirmModal">
@@ -1875,7 +2207,7 @@ async function loadProdTable() {
     if (!tableBody) return;
     
     if (products.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Niciun produs.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Niciun produs.</td></tr>';
         return;
     }
     
@@ -1888,8 +2220,19 @@ async function loadProdTable() {
         const statusBadge = status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
         const statusText = status === 'ok' ? 'În stoc' : status === 'low' ? 'Stoc scăzut' : 'Epuizat';
         
+        // NOU: Badge pentru tip produs
+        const typeBadge = p.product_type === 'complex' ? 
+            '<span class="badge-complex">🍹 Complex</span>' : 
+            '<span class="badge-simple">📦 Simplu</span>';
+        
+        // NOU: Buton pentru rețetă
+        const recipeBtn = isAdmin ? (p.product_type === 'complex' ? 
+            `<button class="btn btn-info btn-sm" onclick="openRecipe(${p.id})" title="Rețetă">📋</button>` : 
+            `<button class="btn btn-secondary btn-sm" onclick="openRecipe(${p.id})" title="Adaugă rețetă">📋</button>`) : '';
+        
         const actionButtons = isAdmin ? `
             <div style="display:flex;gap:6px;">
+                ${recipeBtn}
                 <button class="btn btn-secondary btn-sm" onclick="openProduct(${p.id})">✏️</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
             </div>
@@ -1897,7 +2240,7 @@ async function loadProdTable() {
         
         return `
             <tr>
-                <td><span style="font-size:18px;">${icon}</span> <strong>${p.name}</strong></td>
+                <td><span style="font-size:18px;">${icon}</span> <strong>${p.name}</strong> ${typeBadge}</td>
                 <td>${cat?.name || '-'}</td>
                 <td><strong>${fmt(p.price)} RON</strong></td>
                 <td><span class="badge ${statusBadge}">${p.stock}</span></td>
@@ -2637,6 +2980,334 @@ function printModalContent() {
     w.print();
 }
 
+	// ================================================
+// INGREDIENTS
+// ================================================
+let ingredients = [];
+
+async function loadIngredients() {
+    try {
+        const res = await api('ingredients');
+        if (res.success) {
+            ingredients = res.data || [];
+        }
+    } catch (e) {
+        console.error('Error loading ingredients:', e);
+    }
+}
+
+async function loadIngredientsTable() {
+    await loadIngredients();
+    
+    const tableBody = $('ingredientsTable');
+    if (!tableBody) return;
+    
+    if (ingredients.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Niciun ingredient. Adaugă ingrediente pentru a crea rețete.</td></tr>';
+        return;
+    }
+    
+    tableBody.innerHTML = ingredients.map(ing => {
+        const stockStatus = parseFloat(ing.stock) <= parseFloat(ing.min_stock) ? 'badge-danger' : 'badge-success';
+        const stockText = parseFloat(ing.stock) <= parseFloat(ing.min_stock) ? 'Stoc scăzut' : 'OK';
+        
+        return `
+            <tr>
+                <td><strong>${ing.name}</strong></td>
+                <td>${ing.unit}</td>
+                <td>
+                    <span class="badge ${stockStatus}">${parseFloat(ing.stock).toFixed(2)} ${ing.unit}</span>
+                </td>
+                <td>${parseFloat(ing.min_stock).toFixed(2)} ${ing.unit}</td>
+                <td>${parseFloat(ing.cost_per_unit).toFixed(4)} RON</td>
+                <td>
+                    <div style="display:flex;gap:6px;">
+                        <button class="btn btn-success btn-sm" onclick="openSupply(${ing.id})" title="Aprovizionare">📦</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openIngredient(${ing.id})" title="Editează">✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteIngredient(${ing.id})" title="Șterge">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Verifică stoc scăzut
+    checkLowStock();
+}
+
+function checkLowStock() {
+    const lowStock = ingredients.filter(i => parseFloat(i.stock) <= parseFloat(i.min_stock));
+    const alertDiv = $('lowStockAlert');
+    
+    if (lowStock.length > 0 && alertDiv) {
+        $('lowStockList').innerHTML = lowStock.map(i => `<strong>${i.name}</strong> (${parseFloat(i.stock).toFixed(2)} ${i.unit})`).join(', ');
+        alertDiv.style.display = 'block';
+    } else if (alertDiv) {
+        alertDiv.style.display = 'none';
+    }
+}
+
+function openIngredient(id = null) {
+    const ing = id ? ingredients.find(x => x.id === id) : null;
+    
+    $('ingredientModalTitle').textContent = ing ? '✏️ Editare Ingredient' : '➕ Ingredient Nou';
+    $('ingId').value = ing?.id || '';
+    $('ingName').value = ing?.name || '';
+    $('ingUnit').value = ing?.unit || 'ml';
+    $('ingStock').value = ing?.stock || 0;
+    $('ingMinStock').value = ing?.min_stock || 0;
+    $('ingCost').value = ing?.cost_per_unit || 0;
+    
+    openModal('ingredientModal');
+}
+
+$('ingredientForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    
+    try {
+        const id = $('ingId').value;
+        const res = await api(`ingredients?action=${id ? 'update' : 'create'}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                id: id || undefined,
+                name: $('ingName').value,
+                unit: $('ingUnit').value,
+                stock: parseFloat($('ingStock').value),
+                min_stock: parseFloat($('ingMinStock').value),
+                cost_per_unit: parseFloat($('ingCost').value)
+            })
+        });
+        
+        if (res.success) {
+            closeModal('ingredientModal');
+            toast(id ? 'Ingredient actualizat!' : 'Ingredient adăugat!');
+            await loadIngredientsTable();
+        }
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+    
+    loading(false);
+};
+
+function openSupply(id) {
+    const ing = ingredients.find(x => x.id === id);
+    if (!ing) return;
+    
+    $('supplyIngId').value = ing.id;
+    $('supplyIngName').textContent = ing.name;
+    $('supplyCurrentStock').textContent = `${parseFloat(ing.stock).toFixed(2)} ${ing.unit}`;
+    $('supplyQty').value = '';
+    
+    openModal('supplyModal');
+}
+
+$('supplyForm').onsubmit = async e => {
+    e.preventDefault();
+    loading(true);
+    
+    try {
+        const res = await api('ingredients?action=update_stock', {
+            method: 'POST',
+            body: JSON.stringify({
+                id: parseInt($('supplyIngId').value),
+                quantity: parseFloat($('supplyQty').value)
+            })
+        });
+        
+        if (res.success) {
+            closeModal('supplyModal');
+            toast('Stoc actualizat!');
+            await loadIngredientsTable();
+        }
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+    
+    loading(false);
+};
+
+async function deleteIngredient(id) {
+    const ing = ingredients.find(x => x.id === id);
+    if (!ing) return;
+    
+    showConfirm('🗑️ Șterge Ingredient', `Sigur ștergeți "${ing.name}"? Toate rețetele care îl conțin vor fi afectate.`, async () => {
+        loading(true);
+        try {
+            const res = await api('ingredients?action=delete', {
+                method: 'POST',
+                body: JSON.stringify({ id })
+            });
+            if (res.success) {
+                toast('Ingredient șters!');
+                await loadIngredientsTable();
+            }
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+        loading(false);
+    });
+}
+
+// ================================================
+// RECIPES
+// ================================================
+let currentRecipe = [];
+
+async function openRecipe(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    await loadIngredients();
+    
+    $('recipeProductId').value = productId;
+    $('recipeProductName').textContent = product.name;
+    
+    // Populează dropdown-ul cu ingrediente
+    $('recipeIngredientSelect').innerHTML = '<option value="">-- Selectează ingredient --</option>' +
+        ingredients.map(i => `<option value="${i.id}" data-unit="${i.unit}" data-cost="${i.cost_per_unit}">${i.name} (${i.unit})</option>`).join('');
+    
+    $('recipeIngredientQty').value = '';
+    
+    // Încarcă rețeta existentă
+    try {
+        const res = await api(`recipes?action=get&product_id=${productId}`);
+        if (res.success) {
+            currentRecipe = (res.data || []).map(r => ({
+                ingredient_id: r.ingredient_id,
+                name: r.ingredient.name,
+                quantity: r.quantity,
+                unit: r.ingredient.unit,
+                cost_per_unit: r.ingredient.cost_per_unit
+            }));
+        } else {
+            currentRecipe = [];
+        }
+    } catch (e) {
+        currentRecipe = [];
+    }
+    
+    renderRecipeList();
+    openModal('recipeModal');
+}
+
+function addRecipeIngredient() {
+    const select = $('recipeIngredientSelect');
+    const qtyInput = $('recipeIngredientQty');
+    
+    const ingredientId = parseInt(select.value);
+    const quantity = parseFloat(qtyInput.value);
+    
+    if (!ingredientId) {
+        toast('Selectează un ingredient', 'error');
+        return;
+    }
+    
+    if (!quantity || quantity <= 0) {
+        toast('Introdu o cantitate validă', 'error');
+        return;
+    }
+    
+    // Verifică dacă ingredientul e deja în rețetă
+    if (currentRecipe.find(r => r.ingredient_id === ingredientId)) {
+        toast('Ingredientul e deja în rețetă', 'error');
+        return;
+    }
+    
+    const option = select.options[select.selectedIndex];
+    const ing = ingredients.find(i => i.id === ingredientId);
+    
+    currentRecipe.push({
+        ingredient_id: ingredientId,
+        name: ing.name,
+        quantity: quantity,
+        unit: ing.unit,
+        cost_per_unit: parseFloat(ing.cost_per_unit)
+    });
+    
+    // Reset
+    select.value = '';
+    qtyInput.value = '';
+    
+    renderRecipeList();
+}
+
+function removeRecipeIngredient(ingredientId) {
+    currentRecipe = currentRecipe.filter(r => r.ingredient_id !== ingredientId);
+    renderRecipeList();
+}
+
+function renderRecipeList() {
+    const container = $('recipeList');
+    
+    if (currentRecipe.length === 0) {
+        container.innerHTML = '<div class="recipe-empty">Niciun ingredient în rețetă.<br>Adaugă ingrediente de mai sus.</div>';
+        $('recipeCost').style.display = 'none';
+        return;
+    }
+    
+    let totalCost = 0;
+    
+    container.innerHTML = currentRecipe.map(r => {
+        const itemCost = r.quantity * r.cost_per_unit;
+        totalCost += itemCost;
+        
+        return `
+            <div class="recipe-item">
+                <div class="recipe-item-info">
+                    <span class="recipe-item-name">${r.name}</span>
+                    <span class="recipe-item-qty">${r.quantity} ${r.unit}</span>
+                    <span class="recipe-item-cost">(${itemCost.toFixed(2)} RON)</span>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="removeRecipeIngredient(${r.ingredient_id})">✕</button>
+            </div>
+        `;
+    }).join('');
+    
+    $('recipeTotalCost').textContent = totalCost.toFixed(2);
+    $('recipeCost').style.display = 'block';
+}
+
+async function saveRecipe() {
+    const productId = $('recipeProductId').value;
+    
+    loading(true);
+    
+    try {
+        const res = await api('recipes?action=save', {
+            method: 'POST',
+            body: JSON.stringify({
+                product_id: parseInt(productId),
+                ingredients: currentRecipe.map(r => ({
+                    ingredient_id: r.ingredient_id,
+                    quantity: r.quantity
+                }))
+            })
+        });
+        
+        if (res.success) {
+            closeModal('recipeModal');
+            toast('Rețeta a fost salvată!');
+            await loadProducts();
+            await loadProdTable();
+        }
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+    
+    loading(false);
+}
+
+
+	function setProductType(type) {
+    $('prodType').value = type;
+    $('typeSimple').classList.toggle('active', type === 'simple');
+    $('typeComplex').classList.toggle('active', type === 'complex');
+}
+
+	
+	
 // ================================================
 // INIT
 // ================================================
