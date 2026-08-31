@@ -2904,20 +2904,39 @@ async function loadInventory() {
         renderInventory();
     }
 }
-
-function renderInventory() {
+	function renderInventory() {
     if (!$('invTable')) return;
     
     const isAdmin = user && user.role === 'admin';
+    
+    // Calculează contoarele
+    const allCount = products.length;
+    const okCount = products.filter(p => p.stock > (p.min_stock || 5)).length;
+    const lowCount = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5) && p.stock > Math.floor((p.min_stock || 5) / 2)).length;
+    const critCount = products.filter(p => p.stock > 0 && p.stock <= Math.floor((p.min_stock || 5) / 2)).length;
+    const outCount = products.filter(p => p.stock <= 0).length;
+    
+    // Actualizează contoarele în UI
+    if ($('fAll')) $('fAll').textContent = allCount;
+    if ($('fOk')) $('fOk').textContent = okCount;
+    if ($('fLow')) $('fLow').textContent = lowCount;
+    if ($('fCrit')) $('fCrit').textContent = critCount;
+    if ($('fOut')) $('fOut').textContent = outCount;
+    
+    // Filtrează produsele
     let list = products;
     if (invFilter === 'ok') list = products.filter(p => p.stock > (p.min_stock || 5));
-    if (invFilter === 'low') list = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5));
+    if (invFilter === 'low') list = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 5) && p.stock > Math.floor((p.min_stock || 5) / 2));
+    if (invFilter === 'critical') list = products.filter(p => p.stock > 0 && p.stock <= Math.floor((p.min_stock || 5) / 2));
     if (invFilter === 'out') list = products.filter(p => p.stock <= 0);
     
     $('invTable').innerHTML = list.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
         const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
-        const status = p.stock <= 0 ? 'out' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        const status = p.stock <= 0 ? 'out' : p.stock <= Math.floor((p.min_stock || 5) / 2) ? 'critical' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+        const statusText = status === 'ok' ? 'OK' : status === 'low' ? 'Scăzut' : status === 'critical' ? 'Critic' : 'Epuizat';
+        const badgeClass = status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
+        
         const actionButton = isAdmin 
             ? `<button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button>`
             : '<span class="text-muted">-</span>';
@@ -2926,8 +2945,8 @@ function renderInventory() {
             <tr>
                 <td><strong>${icon} ${p.name}</strong></td>
                 <td>${cat?.name || '-'}</td>
-                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${p.stock}</span></td>
-                <td><span class="badge ${status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger'}">${status === 'ok' ? 'OK' : status === 'low' ? 'Scăzut' : 'Epuizat'}</span></td>
+                <td><span class="badge ${badgeClass}">${p.stock}</span></td>
+                <td><span class="badge ${badgeClass}">${statusText}</span></td>
                 <td>${fmt(p.price)} RON</td>
                 <td>${fmt((p.stock || 0) * parseFloat(p.price || 0))} RON</td>
                 <td>${actionButton}</td>
@@ -2935,6 +2954,7 @@ function renderInventory() {
         `;
     }).join('') || '<tr><td colspan="7" class="text-center text-muted">Niciun produs</td></tr>';
 }
+
 
 function openStock(id) {
     if (!user || user.role !== 'admin') {
