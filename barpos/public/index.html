@@ -959,6 +959,16 @@
 
 		
         .admin-only { display: none; }
+		/* Ascunde coloanele Cost, Profit și Val. Achiziție pentru operatori */
+			body.role-operator #invTable th:nth-child(6),
+			body.role-operator #invTable th:nth-child(7),
+			body.role-operator #invTable th:nth-child(8),
+			body.role-operator #invTable td:nth-child(6),
+			body.role-operator #invTable td:nth-child(7),
+			body.role-operator #invTable td:nth-child(8) {
+    			display: none;
+}
+
     </style>
 </head>
 <body data-theme="light">
@@ -1160,18 +1170,20 @@
                         <div class="table-wrap">
                             <table>
                                  <thead>
-								    <tr>
-        								<th>Produs</th>
+    								<tr>
+        								<th>Produs</th>	
         								<th>Categorie</th>
         								<th>Stoc</th>
         								<th>Status</th>
         								<th>Preț</th>
         								<th>Cost</th>
         								<th>Profit</th>
-        								<th>Valoare</th>
+        								<th>Val. Achiziție</th>
+        								<th>Val. Vânzare</th>
         								<th>Acțiuni</th>
     								</tr>
 								</thead>
+
 
                                 <tbody id="invTable"></tbody>
                             </table>
@@ -2121,6 +2133,10 @@ function showLogin() {
 function showApp() {
     $('loginPage').style.display = 'none';
     $('app').style.display = 'block';
+    
+    // Adaugă clasa de rol pe body
+    document.body.classList.remove('role-admin', 'role-operator');
+    document.body.classList.add('role-' + (user?.role || 'operator'));
 }
 
 $('loginForm').onsubmit = async e => {
@@ -2151,6 +2167,7 @@ $('loginForm').onsubmit = async e => {
 
 async function logout() {
 	stopAutoSync();
+	document.body.classList.remove('role-admin', 'role-operator');
     loading(true);
     try { await api('auth?action=logout', { method: 'POST' }); } catch {}
     token = null;
@@ -3038,50 +3055,56 @@ async function loadInventory() {
         }
     }
     
-    $('invTable').innerHTML = list.map(p => {
-        const cat = categories.find(c => c.id == p.category_id);
-        const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
-        const status = p.stock <= 0 ? 'out' : p.stock <= Math.floor((p.min_stock || 5) / 2) ? 'critical' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
-        const statusText = status === 'ok' ? 'OK' : status === 'low' ? 'Scăzut' : status === 'critical' ? 'Critic' : 'Epuizat';
-        const badgeClass = status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
-        
-        // Calculează profitul
-        const price = parseFloat(p.price) || 0;
-        // Pentru produse complexe, folosește costul din rețetă; pentru simple, costul din produs
-        const cost = p.product_type === 'complex' ? (recipeCosts[p.id] || 0) : (parseFloat(p.cost) || 0);
-        const profit = price - cost;
-        const profitPercent = cost > 0 ? ((profit / cost) * 100).toFixed(1) : (price > 0 ? '∞' : '0');
-        const profitBadge = profit > 0 ? 'badge-success' : profit < 0 ? 'badge-danger' : 'badge-warning';
-        
-        // Indicator pentru sursa costului
-        const costSource = p.product_type === 'complex' ? '📋' : '📦';
-        
-        // Coloane admin
-        const adminColumns = isAdmin ? `
-            <td>${fmt(cost)} RON <small>${costSource}</small></td>
-            <td>
-                <span class="badge ${profitBadge}">${profitPercent}%</span>
-                <small class="text-muted">(${fmt(profit)} RON)</small>
-            </td>
-        ` : '';
-        
-        const actionButton = isAdmin 
-            ? `<button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button>`
-            : '<span class="text-muted">-</span>';
-        
-        return `
-            <tr>
-                <td><strong>${icon} ${p.name}</strong> ${p.product_type === 'complex' ? '<span class="badge-complex">🍹</span>' : ''}</td>
-                <td>${cat?.name || '-'}</td>
-                <td><span class="badge ${badgeClass}">${p.stock}</span></td>
-                <td><span class="badge ${badgeClass}">${statusText}</span></td>
-                <td>${fmt(price)} RON</td>
-                ${adminColumns}
-                <td>${fmt((p.stock || 0) * price)} RON</td>
-                <td>${actionButton}</td>
-            </tr>
-        `;
-    }).join('') || `<tr><td colspan="${isAdmin ? 9 : 7}" class="text-center text-muted">Niciun produs</td></tr>`;
+  $('invTable').innerHTML = list.map(p => {
+    const cat = categories.find(c => c.id == p.category_id);
+    const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
+    const status = p.stock <= 0 ? 'out' : p.stock <= Math.floor((p.min_stock || 5) / 2) ? 'critical' : p.stock <= (p.min_stock || 5) ? 'low' : 'ok';
+    const statusText = status === 'ok' ? 'OK' : status === 'low' ? 'Scăzut' : status === 'critical' ? 'Critic' : 'Epuizat';
+    const badgeClass = status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
+    
+    // Calculează valorile
+    const price = parseFloat(p.price) || 0;
+    const cost = p.product_type === 'complex' ? (recipeCosts[p.id] || 0) : (parseFloat(p.cost) || 0);
+    const stock = parseFloat(p.stock) || 0;
+    
+    // Profit per unitate
+    const profit = price - cost;
+    const profitPercent = cost > 0 ? ((profit / cost) * 100).toFixed(1) : (price > 0 ? '∞' : '0');
+    const profitBadge = profit > 0 ? 'badge-success' : profit < 0 ? 'badge-danger' : 'badge-warning';
+    
+    // Valoare totală la achiziție și vânzare
+    const valueCost = stock * cost;
+    const valueSale = stock * price;
+    
+    const costSource = p.product_type === 'complex' ? '📋' : '📦';
+    
+    const adminColumns = isAdmin ? `
+        <td>${fmt(cost)} RON <small>${costSource}</small></td>
+        <td>
+            <span class="badge ${profitBadge}">${profitPercent}%</span>
+            <small>(${fmt(profit)})</small>
+        </td>
+        <td><span style="color: #e67e22; font-weight: 600;">${fmt(valueCost)} RON</span></td>
+    ` : '';
+    
+    const actionButton = isAdmin 
+        ? `<button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button>`
+        : '<span class="text-muted">-</span>';
+    
+    return `
+        <tr>
+            <td><strong>${icon} ${p.name}</strong> ${p.product_type === 'complex' ? '<span class="badge-complex">🍹</span>' : ''}</td>
+            <td>${cat?.name || '-'}</td>
+            <td><span class="badge ${badgeClass}">${p.stock}</span></td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+            <td>${fmt(price)} RON</td>
+            ${adminColumns}
+            <td><span style="color: #27ae60; font-weight: 600;">${fmt(valueSale)} RON</span></td>
+            <td>${actionButton}</td>
+        </tr>
+    `;
+}).join('') || `<tr><td colspan="${isAdmin ? 10 : 7}" class="text-center text-muted">Niciun produs</td></tr>`;
+
 }
 
 
