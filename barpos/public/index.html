@@ -2115,6 +2115,7 @@ $('loginForm').onsubmit = async e => {
             user = res.data.user;
             showApp();
             initApp();
+			startAutoSync();
             toast('Autentificare reușită!');
         }
     } catch (e) {
@@ -2124,6 +2125,7 @@ $('loginForm').onsubmit = async e => {
 };
 
 async function logout() {
+	stopAutoSync();
     loading(true);
     try { await api('auth?action=logout', { method: 'POST' }); } catch {}
     token = null;
@@ -2143,11 +2145,67 @@ async function checkAuth() {
             user = res.data.user;
             showApp();
             initApp();
+			startAutoSync();
         } else showLogin();
     } catch { showLogin(); }
     loading(false);
 }
 
+// ================================================
+// AUTO SYNC - Sincronizare automată la 30 secunde
+// ================================================
+let syncInterval = null;
+
+function startAutoSync() {
+    // Oprește intervalul existent dacă există
+    if (syncInterval) clearInterval(syncInterval);
+    
+    // Pornește sincronizarea la fiecare 30 secunde
+    syncInterval = setInterval(async () => {
+        if (!user) return; // Nu sincroniza dacă nu e logat
+        
+        try {
+            // Reîncarcă produsele
+            await loadProducts();
+            
+            // Reîncarcă ingredientele dacă există funcția
+            if (typeof loadIngredients === 'function') {
+                await loadIngredients();
+            }
+            
+            // Actualizează UI-ul în funcție de tab-ul activ
+            const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
+            
+            if (activeTab === 'inventory') {
+                renderInventory();
+            } else if (activeTab === 'products') {
+                loadProdTable();
+            } else if (activeTab === 'ingredients') {
+                loadIngredientsTable();
+            } else if (activeTab === 'pos') {
+                renderProducts();
+            } else if (activeTab === 'cash') {
+                loadCashSummary();
+            }
+            
+            console.log('🔄 Sync completat:', new Date().toLocaleTimeString());
+        } catch (e) {
+            console.error('Eroare sincronizare:', e);
+        }
+    }, 30000); // 30 secunde
+    
+    console.log('✅ Auto-sync pornit (30s)');
+}
+
+function stopAutoSync() {
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+        console.log('⏹️ Auto-sync oprit');
+    }
+}
+
+	
 // ================================================
 // APP INIT
 // ================================================
