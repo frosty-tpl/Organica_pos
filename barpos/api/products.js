@@ -42,6 +42,7 @@ export default async function handler(req, res) {
                         name: body.name,
                         category_id: body.category_id,
                         price: body.price,
+                        cost: body.cost || 0,
                         stock: body.stock || 0,
                         min_stock: body.min_stock || 5,
                         icon: body.icon || ':box:',
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
                         name: body.name,
                         category_id: body.category_id,
                         price: body.price,
+                        cost: body.cost || 0,
                         stock: body.stock,
                         min_stock: body.min_stock,
                         icon: body.icon
