@@ -1159,7 +1159,7 @@
 
                         <div class="table-wrap">
                             <table>
-                                <thead><tr><th>Produs</th><th>Categorie</th><th>Stoc</th><th>Status</th><th>Preț</th><th>Valoare</th><th>Acțiuni</th></tr></thead>
+                                <thead><tr><th>Produs</th><th>Categorie</th><th>Stoc</th><th>Status</th><th>Preț</th><th class="admin-only">Cost</th><th class="admin-only">Profit</th><th>Valoare</th><th>Acțiuni</th></tr></thead>
                                 <tbody id="invTable"></tbody>
                             </table>
                         </div>
@@ -1599,6 +1599,17 @@
                     <label>Nume Produs</label>
                     <input type="text" class="form-control" id="prodName" required placeholder="Ex: Heineken 500ml">
                 </div>
+				<div class="form-row">
+					 <div class="form-group">
+        				<label>Preț vânzare (RON)</label>
+        				<input type="number" id="prodPrice" step="0.01" required>
+    				 </div>
+    			<div class="form-group">
+        			<label>Cost achiziție (RON)</label>
+        			<input type="number" id="prodCost" step="0.01" value="0">
+    			</div>
+			</div>
+
                 <div class="form-group">
                     <label>Categorie</label>
                     <select class="form-control" id="prodCat" required></select>
@@ -2417,6 +2428,7 @@ function openProduct(id = null) {
     $('prodCat').value = p?.category_id || (categories[0]?.id || '');
     $('prodIcon').value = p?.icon || ':box:';
     $('prodPrice').value = p?.price || '';
+	$('prodCost').value = p?.cost || 0;
     $('prodStock').value = p?.stock ?? 0;
     $('prodMinStock').value = p?.min_stock ?? 5;
     openModal('prodModal');
@@ -2465,6 +2477,7 @@ $('prodForm').onsubmit = async e => {
                 category_id: parseInt($('prodCat').value),
                 icon: $('prodIcon').value,
                 price: parseFloat($('prodPrice').value),
+				cost: parseFloat($('prodCost').value) || 0,
                 stock: parseInt($('prodStock').value),
                 min_stock: parseInt($('prodMinStock').value)
             })
@@ -2955,14 +2968,15 @@ async function loadInventory() {
         const res = await api('inventory?action=list&status=' + invFilter);
         if (res.success) {
             products = res.data || [];
-            renderInventory();
+            await renderInventory();
         }
     } catch (e) { 
         await loadProducts();
-        renderInventory();
+        await renderInventory();
     }
 }
-	function renderInventory() {
+
+	async function renderInventory() {
     if (!$('invTable')) return;
     
     const isAdmin = user && user.role === 'admin';
@@ -3001,6 +3015,15 @@ async function loadInventory() {
         list = list.filter(p => p.category_id == catFilter);
     }
     
+    // Pentru produsele complexe, calculează costul din rețetă
+    const recipeCosts = {};
+    if (isAdmin) {
+        const complexProducts = list.filter(p => p.product_type === 'complex');
+        for (const p of complexProducts) {
+            recipeCosts[p.id] = await calculateRecipeCost(p.id);
+        }
+    }
+    
     $('invTable').innerHTML = list.map(p => {
         const cat = categories.find(c => c.id == p.category_id);
         const icon = getIcon(p.icon) || (cat ? cat.icon : '📦');
@@ -3008,22 +3031,43 @@ async function loadInventory() {
         const statusText = status === 'ok' ? 'OK' : status === 'low' ? 'Scăzut' : status === 'critical' ? 'Critic' : 'Epuizat';
         const badgeClass = status === 'ok' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
         
+        // Calculează profitul
+        const price = parseFloat(p.price) || 0;
+        // Pentru produse complexe, folosește costul din rețetă; pentru simple, costul din produs
+        const cost = p.product_type === 'complex' ? (recipeCosts[p.id] || 0) : (parseFloat(p.cost) || 0);
+        const profit = price - cost;
+        const profitPercent = cost > 0 ? ((profit / cost) * 100).toFixed(1) : (price > 0 ? '∞' : '0');
+        const profitBadge = profit > 0 ? 'badge-success' : profit < 0 ? 'badge-danger' : 'badge-warning';
+        
+        // Indicator pentru sursa costului
+        const costSource = p.product_type === 'complex' ? '📋' : '📦';
+        
+        // Coloane admin
+        const adminColumns = isAdmin ? `
+            <td>${fmt(cost)} RON <small>${costSource}</small></td>
+            <td>
+                <span class="badge ${profitBadge}">${profitPercent}%</span>
+                <small class="text-muted">(${fmt(profit)} RON)</small>
+            </td>
+        ` : '';
+        
         const actionButton = isAdmin 
             ? `<button class="btn btn-secondary btn-sm" onclick="openStock(${p.id})">📦 Ajustare</button>`
             : '<span class="text-muted">-</span>';
         
         return `
             <tr>
-                <td><strong>${icon} ${p.name}</strong></td>
+                <td><strong>${icon} ${p.name}</strong> ${p.product_type === 'complex' ? '<span class="badge-complex">🍹</span>' : ''}</td>
                 <td>${cat?.name || '-'}</td>
                 <td><span class="badge ${badgeClass}">${p.stock}</span></td>
                 <td><span class="badge ${badgeClass}">${statusText}</span></td>
-                <td>${fmt(p.price)} RON</td>
-                <td>${fmt((p.stock || 0) * parseFloat(p.price || 0))} RON</td>
+                <td>${fmt(price)} RON</td>
+                ${adminColumns}
+                <td>${fmt((p.stock || 0) * price)} RON</td>
                 <td>${actionButton}</td>
             </tr>
         `;
-    }).join('') || '<tr><td colspan="7" class="text-center text-muted">Niciun produs</td></tr>';
+    }).join('') || `<tr><td colspan="${isAdmin ? 9 : 7}" class="text-center text-muted">Niciun produs</td></tr>`;
 }
 
 
@@ -3675,6 +3719,27 @@ async function saveRecipe() {
     $('typeComplex').classList.toggle('active', type === 'complex');
 }
 
+	// Calculează costul unui produs complex din rețetă
+async function calculateRecipeCost(productId) {
+    try {
+        const res = await api(`recipes?action=get&product_id=${productId}`);
+        if (res.success && res.data && res.data.length > 0) {
+            let totalCost = 0;
+            for (const item of res.data) {
+                const ingredientCost = parseFloat(item.ingredient?.cost_per_unit) || 0;
+                const quantity = parseFloat(item.quantity) || 0;
+                totalCost += ingredientCost * quantity;
+            }
+            return totalCost;
+        }
+    } catch (e) {
+        console.error('Eroare calcul cost rețetă:', e);
+    }
+    return 0;
+}
+	
+
+	
 	// ================================================
 // CASH REGISTER CONFIGURATION
 // ================================================
