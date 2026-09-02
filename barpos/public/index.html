@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BarPOS - Sistem de Vânzare</title>
+    <title>Organica POS - Sistem de Vânzare</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍺</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -997,7 +997,7 @@
         <div class="login-box">
             <div class="login-logo">
                 <div class="icon">🍺</div>
-                <h1>BarPOS</h1>
+                <h1>Organica POS</h1>
                 <p>Sistem de gestiune și vânzare</p>
             </div>
             <div id="loginError"></div>
@@ -1024,7 +1024,7 @@
         <header class="header">
             <div class="header-brand">
                 <span>🍺</span>
-                <span>BarPOS</span>
+                <span>Organica POS</span>
             </div>
             <div class="header-info">
                 <div class="header-badge badge-cash">💰 <span id="headerCash">0.00</span> RON</div>
@@ -1506,7 +1506,7 @@
                 <button class="btn btn-secondary" onclick="setTheme('light')">☀️ Light</button>
                 <button class="btn btn-secondary" onclick="setTheme('dark')">🌙 Dark</button>
             </div>
-            <p class="text-muted">BarPOS v1.0 - Sistem de gestiune pentru bar/restaurant</p>
+            <p class="text-muted">Organica POS v1.0 - Sistem de gestiune pentru bar/restaurant</p>
         </div>
     </div>
 </div>
@@ -2709,7 +2709,7 @@ async function confirmPay() {
             
             $('receiptContent').innerHTML = `
                 <div class="receipt-header">
-                    <div class="receipt-title">BarPOS</div>
+                    <div class="receipt-title">Organica POS</div>
                     <div>${new Date().toLocaleString('ro-RO')}</div>
                     <div>Operator: ${user.name}</div>
                 </div>
@@ -3442,7 +3442,7 @@ async function printTestReceipt() {
     if (!$('settingFiscoEnabled')?.checked) { toast('Activează imprimarea fiscală!', 'warning'); return; }
     loading(true);
     try {
-        const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({command:'printNonFiscal',lines:['=== BON TEST ===','BarPOS','Data: '+new Date().toLocaleString('ro-RO'),'================']}), signal: AbortSignal.timeout(15000) });
+        const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({command:'printNonFiscal',lines:['=== BON TEST ===','Organica POS','Data: '+new Date().toLocaleString('ro-RO'),'================']}), signal: AbortSignal.timeout(15000) });
         if (r.ok) toast('✅ Bon trimis!', 'success');
         else toast('❌ Eroare', 'error');
     } catch (e) { toast('❌ Eroare: ' + e.message, 'error'); }
