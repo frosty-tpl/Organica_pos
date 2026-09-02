@@ -968,7 +968,18 @@
 			body.role-operator #invTable td:nth-child(8) {
     			display: none;
 }
+/* Password visibility */
+.password-hidden, .password-visible {
+    font-family: monospace;
+    font-size: 14px;
+}
 
+.password-visible {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+		
     </style>
 </head>
 <body data-theme="light">
@@ -2130,6 +2141,32 @@ function showLogin() {
     $('app').style.display = 'none';
 }
 
+// Toggle vizibilitate parolă
+function togglePassword(userId) {
+    const hidden = $('pass-' + userId);
+    const visible = $('passText-' + userId);
+    const icon = $('eyeIcon-' + userId);
+    
+    if (hidden.style.display !== 'none') {
+        // Arată parola
+        hidden.style.display = 'none';
+        visible.style.display = 'inline';
+        icon.textContent = '🙈';
+        
+        // Ascunde automat după 3 secunde
+        setTimeout(() => {
+            hidden.style.display = 'inline';
+            visible.style.display = 'none';
+            icon.textContent = '👁️';
+        }, 3000);
+    } else {
+        // Ascunde parola
+        hidden.style.display = 'inline';
+        visible.style.display = 'none';
+        icon.textContent = '👁️';
+    }
+}
+
 function showApp() {
     $('loginPage').style.display = 'none';
     $('app').style.display = 'block';
@@ -3191,24 +3228,34 @@ async function genSalesReport() {
 // USERS MANAGEMENT
 // ================================================
 async function loadUsers() {
-    if (user.role !== 'admin') return;
     try {
         const res = await api('users');
         if (res.success && $('usersTable')) {
-            $('usersTable').innerHTML = (res.data || []).map(u => `
+            const users_list = res.data || [];
+            $('usersTable').innerHTML = users_list.map(u => `
                 <tr>
                     <td><strong>${u.name}</strong></td>
-                    <td><code>${u.password || '••••'}</code></td>
-                    <td><span class="badge ${u.role === 'admin' ? 'badge-warning' : 'badge-info'}">${u.role}</span></td>
-                    <td><span class="badge ${u.active ? 'badge-success' : 'badge-muted'}">${u.active ? 'Activ' : 'Inactiv'}</span></td>
+                    <td>${u.username}</td>
                     <td>
-                        <button class="btn btn-secondary btn-sm" onclick="openUser(${u.id})">✏️</button>
-                        ${u.id !== user.id ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
+                        <span class="password-hidden" id="pass-${u.id}">••••••••</span>
+                        <span class="password-visible" id="passText-${u.id}" style="display:none;">${u.password || ''}</span>
+                        <button class="btn btn-sm btn-secondary" onclick="togglePassword(${u.id})" style="padding: 2px 8px; margin-left: 8px;">
+                            <span id="eyeIcon-${u.id}">👁️</span>
+                        </button>
+                    </td>
+                    <td><span class="badge ${u.role === 'admin' ? 'badge-danger' : 'badge-success'}">${u.role === 'admin' ? 'Admin' : 'Operator'}</span></td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn btn-secondary btn-sm" onclick="openUser(${u.id})">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})" ${u.role === 'admin' ? 'disabled' : ''}>🗑️</button>
+                        </div>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" class="text-center">-</td></tr>';
+            `).join('') || '<tr><td colspan="5" class="text-center text-muted">Niciun utilizator</td></tr>';
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error('Error loading users:', e);
+    }
 }
 
 function openUserModal() { openUser(null); }
